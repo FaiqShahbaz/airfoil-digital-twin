@@ -22,6 +22,7 @@ data/manifests/
 simulations/cases/
 results/
 checkpoints/
+review_bundles/
 
 # Logs
 *.log
