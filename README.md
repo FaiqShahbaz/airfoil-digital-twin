@@ -4,7 +4,7 @@ A local-first airfoil CFD surrogate / digital twin project using Docker-based Op
 
 ## Scope
 
-This repository is currently at Gate 0: project skeleton and environment checks only. It does not yet implement CFD execution, geometry generation, preprocessing, ML training, evaluation, or dashboard functionality.
+This repository is currently at Gate 1: minimal NACA 4-digit geometry generation and environment checks only. It does not yet implement SDF generation, OpenFOAM/STL export, CFD execution, preprocessing, ML training, evaluation, or dashboard functionality.
 
 ## OpenFOAM
 
