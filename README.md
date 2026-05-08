@@ -4,7 +4,7 @@ A local-first airfoil CFD surrogate / digital twin project using Docker-based Op
 
 ## Scope
 
-This repository is currently at Gate 1: minimal NACA 4-digit geometry generation and environment checks only. It does not yet implement SDF generation, OpenFOAM/STL export, CFD execution, preprocessing, ML training, evaluation, or dashboard functionality.
+This repository is currently at Gate 2 scaffolding: minimal NACA 4-digit geometry generation, Docker OpenFOAM checks, and a single placeholder validation-case writer. It does not yet implement SDF generation, STL export, validated meshing, CFD execution, preprocessing, ML training, evaluation, or dashboard functionality.
 
 ## OpenFOAM
 
@@ -17,6 +17,14 @@ python scripts/check_openfoam_docker.py
 ```
 
 This check verifies `blockMesh`, `checkMesh`, and `simpleFoam` through `openfoam2412 -c`; it does not create cases or run CFD.
+
+Create the current scaffold-only NACA 0012 validation case:
+
+```bash
+python scripts/create_single_case.py
+```
+
+The generated case is intentionally incomplete and is not CFD-valid yet. See `docs/cfd_case_validation.md` before attempting validation runs.
 
 ## Validation-First Plan
 
