@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from airfoil_dt.cfd.case_config import OpenFOAMCaseConfig  # noqa: E402
-from airfoil_dt.cfd.write_case import (  # noqa: E402
+from airfoil_dt.cfd.case_config import OpenFOAMCaseConfig
+from airfoil_dt.cfd.write_case import (
     create_case_directory,
     write_case_metadata,
     write_placeholder_case_files,

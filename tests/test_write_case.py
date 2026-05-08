@@ -7,8 +7,6 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
 from airfoil_dt.cfd.case_config import OpenFOAMCaseConfig
 from airfoil_dt.cfd.write_case import (
     SCAFFOLD_WARNING,

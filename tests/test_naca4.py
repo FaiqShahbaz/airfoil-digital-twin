@@ -2,10 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from airfoil_dt.geometry.naca4 import generate_naca4, parse_naca4
 

@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import subprocess
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from airfoil_dt.cfd.docker_openfoam import (  # noqa: E402
+from airfoil_dt.cfd.docker_openfoam import (
     build_openfoam_docker_command,
     load_openfoam_docker_config,
 )

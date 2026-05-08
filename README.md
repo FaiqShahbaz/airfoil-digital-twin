@@ -38,9 +38,10 @@ No ML4CFD-equivalent performance is claimed. No unsupported accuracy, speedup, o
 
 ## Gate 0 Setup
 
-Install minimal early dependencies:
+Install the local package in editable mode, then install the minimal early development dependencies:
 
 ```bash
+python -m pip install -e .
 python -m pip install -r requirements.txt
 ```
 
