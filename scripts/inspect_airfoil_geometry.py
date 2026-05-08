@@ -40,30 +40,32 @@ def default_validation_config() -> OpenFOAMCaseConfig:
     )
 
 
-def main() -> int:
-    config = default_validation_config()
-    geometry = generate_naca4(config.naca_code)
+def write_variant_artifacts(config: OpenFOAMCaseConfig, finite_te: bool) -> dict:
+    variant_name = "finite_te" if finite_te else "closed_te"
+    geometry = generate_naca4(config.naca_code, finite_te=finite_te)
     case_dir = create_case_directory(config, CASE_ROOT)
-    write_case_metadata(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M)
+    write_case_metadata(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M, finite_te=finite_te)
     write_placeholder_case_files(config, case_dir)
-    stl_path = write_airfoil_stl_file(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M)
+    stl_path = write_airfoil_stl_file(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M, finite_te=finite_te)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     summary = {
         "warning": "Geometry/STL inspection only; this is not CFD validation.",
+        "variant": variant_name,
+        "finite_te": finite_te,
         "case_path": str(case_dir),
         "geometry": summarize_airfoil_geometry(geometry),
         "stl": summarize_ascii_stl(stl_path),
     }
 
-    summary_path = OUTPUT_DIR / "naca0012_summary.json"
+    summary_path = OUTPUT_DIR / f"naca0012_{variant_name}_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 
-    plot_path = OUTPUT_DIR / "naca0012_geometry.png"
+    plot_path = OUTPUT_DIR / f"naca0012_{variant_name}_geometry.png"
     fig, ax = plt.subplots(figsize=(8, 3))
     ax.plot(geometry.surface_x, geometry.surface_y, color="tab:blue", linewidth=1.5)
     ax.scatter([geometry.surface_x[0], geometry.surface_x[-1]], [geometry.surface_y[0], geometry.surface_y[-1]], s=12)
-    ax.set_title("NACA 0012 Geometry Inspection")
+    ax.set_title(f"NACA 0012 Geometry Inspection ({variant_name})")
     ax.set_xlabel("x / chord")
     ax.set_ylabel("y / chord")
     ax.set_aspect("equal", adjustable="box")
@@ -72,10 +74,21 @@ def main() -> int:
     fig.savefig(plot_path, dpi=160)
     plt.close(fig)
 
+    summary["summary_path"] = str(summary_path)
+    summary["plot_path"] = str(plot_path)
+    return summary
+
+
+def main() -> int:
+    config = default_validation_config()
+    finite_summary = write_variant_artifacts(config, finite_te=True)
+    closed_summary = write_variant_artifacts(config, finite_te=False)
+
     print("Geometry/STL inspection only; this is not CFD validation.")
-    print(json.dumps(summary, indent=2))
-    print(f"Summary JSON: {summary_path}")
-    print(f"Geometry PNG: {plot_path}")
+    print("Trailing-edge gap comparison:")
+    print(f"finite_te closed_surface_gap: {finite_summary['geometry']['closed_surface_gap']:.12g}")
+    print(f"closed_te closed_surface_gap: {closed_summary['geometry']['closed_surface_gap']:.12g}")
+    print(json.dumps({"finite_te": finite_summary, "closed_te": closed_summary}, indent=2))
     return 0
 
 

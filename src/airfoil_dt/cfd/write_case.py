@@ -33,6 +33,7 @@ def write_case_metadata(
     config: OpenFOAMCaseConfig,
     case_dir: str | Path,
     span_m: float = DEFAULT_AIRFOIL_SPAN_M,
+    finite_te: bool = True,
 ) -> Path:
     """Write machine-readable case metadata for validation tracking."""
     metadata_path = Path(case_dir) / "case_metadata.json"
@@ -48,6 +49,7 @@ def write_case_metadata(
         "inlet_velocity": list(config.inlet_velocity),
         "airfoil_stl": AIRFOIL_STL_RELATIVE_PATH.as_posix(),
         "span_m": span_m,
+        "finite_te": finite_te,
     }
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     return metadata_path
@@ -57,9 +59,10 @@ def write_airfoil_stl_file(
     config: OpenFOAMCaseConfig,
     case_dir: str | Path,
     span_m: float = DEFAULT_AIRFOIL_SPAN_M,
+    finite_te: bool = True,
 ) -> Path:
     """Write the scaffold case airfoil STL for later triSurface use."""
-    geometry = generate_naca4(config.naca_code)
+    geometry = generate_naca4(config.naca_code, finite_te=finite_te)
     return write_airfoil_stl(geometry, Path(case_dir) / AIRFOIL_STL_RELATIVE_PATH, span_m=span_m)
 
 

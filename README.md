@@ -24,6 +24,8 @@ Create the current scaffold-only NACA 0012 validation case:
 python scripts/create_single_case.py
 ```
 
+Use `python scripts/create_single_case.py --closed-te` only when explicitly inspecting the closed trailing-edge variant.
+
 The generated case is intentionally incomplete and is not CFD-valid yet. See `docs/cfd_case_validation.md` before attempting validation runs.
 
 Inspect generated NACA 0012 geometry/STL artifacts before meshing:

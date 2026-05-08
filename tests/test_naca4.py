@@ -89,6 +89,20 @@ def test_generate_naca4_leading_and_trailing_edges_are_near_expected_locations()
     assert np.min(geometry.surface_x) == pytest.approx(0.0, abs=1e-14)
 
 
+def test_generate_naca4_finite_trailing_edge_gap_is_expected() -> None:
+    geometry = generate_naca4("0012", n_points=120, finite_te=True)
+    gap = np.hypot(geometry.surface_x[0] - geometry.surface_x[-1], geometry.surface_y[0] - geometry.surface_y[-1])
+
+    assert gap == pytest.approx(0.00252, abs=1e-12)
+
+
+def test_generate_naca4_closed_trailing_edge_gap_is_near_zero() -> None:
+    geometry = generate_naca4("0012", n_points=120, finite_te=False)
+    gap = np.hypot(geometry.surface_x[0] - geometry.surface_x[-1], geometry.surface_y[0] - geometry.surface_y[-1])
+
+    assert gap == pytest.approx(0.0, abs=1e-12)
+
+
 def test_generate_naca4_rejects_invalid_point_count() -> None:
     with pytest.raises(ValueError):
         generate_naca4("0012", n_points=1)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 from airfoil_dt.cfd.case_config import OpenFOAMCaseConfig
@@ -31,16 +32,29 @@ def default_validation_config() -> OpenFOAMCaseConfig:
     )
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Create the default scaffold-only NACA 0012 case.")
+    parser.add_argument(
+        "--closed-te",
+        action="store_true",
+        help="Generate closed trailing-edge geometry/STL instead of the finite trailing-edge default.",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
+    args = parse_args()
+    finite_te = not args.closed_te
     config = default_validation_config()
     case_dir = create_case_directory(config, CASE_ROOT)
-    write_case_metadata(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M)
+    write_case_metadata(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M, finite_te=finite_te)
     written_files = write_placeholder_case_files(config, case_dir)
-    stl_path = write_airfoil_stl_file(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M)
+    stl_path = write_airfoil_stl_file(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M, finite_te=finite_te)
 
     print(f"Case path: {case_dir}")
     print(f"U_inf: {config.u_inf_m_s:.12g} m/s")
     print(f"Inlet velocity: {config.inlet_velocity}")
+    print(f"finite_te: {finite_te}")
     print(f"Airfoil STL: {stl_path}")
     print("WARNING: This is a scaffold only and is not yet a validated CFD case.")
     print("Generated case files:")

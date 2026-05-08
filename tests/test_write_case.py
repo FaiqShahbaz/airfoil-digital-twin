@@ -77,6 +77,7 @@ def test_case_metadata_contains_expected_values(tmp_path: Path, config: OpenFOAM
     assert metadata["inlet_velocity"] == pytest.approx([15.0, 0.0, 0.0])
     assert metadata["airfoil_stl"] == "constant/triSurface/airfoil.stl"
     assert metadata["span_m"] == pytest.approx(0.1)
+    assert metadata["finite_te"] is True
 
 
 def test_write_case_writes_airfoil_stl(tmp_path: Path, config: OpenFOAMCaseConfig) -> None:
@@ -116,5 +117,23 @@ def test_create_single_case_script_writes_default_case() -> None:
     assert case_dir.is_dir()
     assert (case_dir / "case_metadata.json").exists()
     assert (case_dir / "constant" / "triSurface" / "airfoil.stl").exists()
+    metadata = json.loads((case_dir / "case_metadata.json").read_text(encoding="utf-8"))
+    assert metadata["finite_te"] is True
     for relative_path in EXPECTED_PLACEHOLDER_FILES:
         assert (case_dir / relative_path).exists()
+
+
+def test_create_single_case_script_closed_te_writes_metadata() -> None:
+    script = Path("scripts/create_single_case.py")
+    result = subprocess.run(
+        [sys.executable, str(script), "--closed-te"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    case_dir = Path("simulations/cases/naca0012_aoa0_re1e6")
+    metadata = json.loads((case_dir / "case_metadata.json").read_text(encoding="utf-8"))
+    assert metadata["finite_te"] is False

@@ -7,7 +7,8 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 ## Geometry/STL Inspection Before Meshing
 
 - Run `python scripts/inspect_airfoil_geometry.py` before attempting mesh generation.
-- Inspect `results/geometry_inspection/naca0012_geometry.png` for obvious geometry problems.
+- Inspect `results/geometry_inspection/naca0012_finite_te_geometry.png` and `results/geometry_inspection/naca0012_closed_te_geometry.png` for obvious geometry problems.
+- Compare `closed_surface_gap` in the finite and closed trailing-edge summaries before choosing a meshing path.
 - Optionally open `simulations/cases/naca0012_aoa0_re1e6/constant/triSurface/airfoil.stl` in ParaView or MeshLab.
 - Do not proceed to meshing if the 2D geometry or STL bounds, span, closure, or visual shape looks wrong.
 - This inspection is not CFD validation and does not replace mesh-quality or solver checks.

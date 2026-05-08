@@ -37,6 +37,13 @@ def test_summarize_airfoil_geometry_naca0012_chord_and_gap() -> None:
     assert summary["has_nan_or_inf"] is False
 
 
+def test_summarize_airfoil_geometry_closed_trailing_edge_gap_is_near_zero() -> None:
+    geometry = generate_naca4("0012", n_points=80, finite_te=False)
+    summary = summarize_airfoil_geometry(geometry)
+
+    assert summary["closed_surface_gap"] == pytest.approx(0.0, abs=1e-12)
+
+
 def test_summarize_ascii_stl_reports_facets_and_span(tmp_path: Path) -> None:
     span_m = 0.25
     geometry = generate_naca4("0012", n_points=60)
@@ -63,5 +70,7 @@ def test_inspect_airfoil_geometry_script_runs_successfully() -> None:
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert Path("results/geometry_inspection/naca0012_summary.json").exists()
-    assert Path("results/geometry_inspection/naca0012_geometry.png").exists()
+    assert Path("results/geometry_inspection/naca0012_finite_te_summary.json").exists()
+    assert Path("results/geometry_inspection/naca0012_closed_te_summary.json").exists()
+    assert Path("results/geometry_inspection/naca0012_finite_te_geometry.png").exists()
+    assert Path("results/geometry_inspection/naca0012_closed_te_geometry.png").exists()
