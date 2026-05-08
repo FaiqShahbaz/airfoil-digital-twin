@@ -4,6 +4,14 @@ The current Gate 2 NACA 0012 case is a scaffold only. It is not CFD-valid yet, a
 
 Before scaling to more cases, validate one or two local OpenFOAM cases with the configured Docker image.
 
+## Geometry/STL Inspection Before Meshing
+
+- Run `python scripts/inspect_airfoil_geometry.py` before attempting mesh generation.
+- Inspect `results/geometry_inspection/naca0012_geometry.png` for obvious geometry problems.
+- Optionally open `simulations/cases/naca0012_aoa0_re1e6/constant/triSurface/airfoil.stl` in ParaView or MeshLab.
+- Do not proceed to meshing if the 2D geometry or STL bounds, span, closure, or visual shape looks wrong.
+- This inspection is not CFD validation and does not replace mesh-quality or solver checks.
+
 ## Manual Checks
 
 - Define and review the mesh generation strategy before running `blockMesh` or any mesh tool.

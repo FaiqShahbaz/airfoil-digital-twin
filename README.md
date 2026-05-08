@@ -26,6 +26,12 @@ python scripts/create_single_case.py
 
 The generated case is intentionally incomplete and is not CFD-valid yet. See `docs/cfd_case_validation.md` before attempting validation runs.
 
+Inspect generated NACA 0012 geometry/STL artifacts before meshing:
+
+```bash
+python scripts/inspect_airfoil_geometry.py
+```
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.
