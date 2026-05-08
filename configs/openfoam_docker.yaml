@@ -1,0 +1,6 @@
+image: opencfd/openfoam-run:2412
+entrypoint: openfoam2412
+required_commands:
+  - blockMesh
+  - checkMesh
+  - simpleFoam

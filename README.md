@@ -8,7 +8,15 @@ This repository is currently at Gate 1: minimal NACA 4-digit geometry generation
 
 ## OpenFOAM
 
-OpenFOAM will be used through Docker, not through a native macOS installation. The environment check only attempts an OpenFOAM Docker run when `OPENFOAM_DOCKER_IMAGE` is configured.
+OpenFOAM will be used through Docker, not through a native macOS installation. The verified local image is configured in `configs/openfoam_docker.yaml` as `opencfd/openfoam-run:2412` with the `openfoam2412` entrypoint.
+
+Check the configured Docker OpenFOAM image and required commands:
+
+```bash
+python scripts/check_openfoam_docker.py
+```
+
+This check verifies `blockMesh`, `checkMesh`, and `simpleFoam` through `openfoam2412 -c`; it does not create cases or run CFD.
 
 ## Validation-First Plan
 
