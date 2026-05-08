@@ -6,7 +6,9 @@ from pathlib import Path
 
 from airfoil_dt.cfd.case_config import OpenFOAMCaseConfig
 from airfoil_dt.cfd.write_case import (
+    DEFAULT_AIRFOIL_SPAN_M,
     create_case_directory,
+    write_airfoil_stl_file,
     write_case_metadata,
     write_placeholder_case_files,
 )
@@ -32,16 +34,19 @@ def default_validation_config() -> OpenFOAMCaseConfig:
 def main() -> int:
     config = default_validation_config()
     case_dir = create_case_directory(config, CASE_ROOT)
-    write_case_metadata(config, case_dir)
+    write_case_metadata(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M)
     written_files = write_placeholder_case_files(config, case_dir)
+    stl_path = write_airfoil_stl_file(config, case_dir, span_m=DEFAULT_AIRFOIL_SPAN_M)
 
     print(f"Case path: {case_dir}")
     print(f"U_inf: {config.u_inf_m_s:.12g} m/s")
     print(f"Inlet velocity: {config.inlet_velocity}")
+    print(f"Airfoil STL: {stl_path}")
     print("WARNING: This is a scaffold only and is not yet a validated CFD case.")
     print("Generated case files:")
     for path in written_files:
         print(f"- {path.relative_to(case_dir)}")
+    print(f"- {stl_path.relative_to(case_dir)}")
     return 0
 
 

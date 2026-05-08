@@ -6,20 +6,34 @@ import json
 from pathlib import Path
 
 from airfoil_dt.cfd.case_config import OpenFOAMCaseConfig
+from airfoil_dt.geometry.naca4 import generate_naca4
+from airfoil_dt.geometry.stl import write_airfoil_stl
 
 
 SCAFFOLD_WARNING = "SCaffold only: this OpenFOAM case has not been validated for CFD correctness."
+AIRFOIL_STL_RELATIVE_PATH = Path("constant/triSurface/airfoil.stl")
+DEFAULT_AIRFOIL_SPAN_M = 0.1
 
 
 def create_case_directory(config: OpenFOAMCaseConfig, root_dir: str | Path) -> Path:
     """Create the base directory tree for a scaffolded OpenFOAM case."""
     case_dir = Path(root_dir) / config.case_name
-    for directory in (case_dir, case_dir / "system", case_dir / "constant", case_dir / "0"):
+    for directory in (
+        case_dir,
+        case_dir / "system",
+        case_dir / "constant",
+        case_dir / "constant" / "triSurface",
+        case_dir / "0",
+    ):
         directory.mkdir(parents=True, exist_ok=True)
     return case_dir
 
 
-def write_case_metadata(config: OpenFOAMCaseConfig, case_dir: str | Path) -> Path:
+def write_case_metadata(
+    config: OpenFOAMCaseConfig,
+    case_dir: str | Path,
+    span_m: float = DEFAULT_AIRFOIL_SPAN_M,
+) -> Path:
     """Write machine-readable case metadata for validation tracking."""
     metadata_path = Path(case_dir) / "case_metadata.json"
     metadata = {
@@ -32,9 +46,21 @@ def write_case_metadata(config: OpenFOAMCaseConfig, case_dir: str | Path) -> Pat
         "rho_kg_m3": config.rho_kg_m3,
         "u_inf_m_s": config.u_inf_m_s,
         "inlet_velocity": list(config.inlet_velocity),
+        "airfoil_stl": AIRFOIL_STL_RELATIVE_PATH.as_posix(),
+        "span_m": span_m,
     }
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     return metadata_path
+
+
+def write_airfoil_stl_file(
+    config: OpenFOAMCaseConfig,
+    case_dir: str | Path,
+    span_m: float = DEFAULT_AIRFOIL_SPAN_M,
+) -> Path:
+    """Write the scaffold case airfoil STL for later triSurface use."""
+    geometry = generate_naca4(config.naca_code)
+    return write_airfoil_stl(geometry, Path(case_dir) / AIRFOIL_STL_RELATIVE_PATH, span_m=span_m)
 
 
 def write_placeholder_case_files(config: OpenFOAMCaseConfig, case_dir: str | Path) -> list[Path]:
