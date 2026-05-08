@@ -1,0 +1,13 @@
+pytest
+numpy
+scipy
+matplotlib
+pyyaml
+
+# Later-stage dependencies, intentionally not installed for Gate 0:
+# torch
+# torch-geometric
+# vtk
+# pyvista
+# streamlit
+# plotly
