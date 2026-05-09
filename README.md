@@ -34,6 +34,12 @@ Inspect generated NACA 0012 geometry/STL artifacts before meshing:
 python scripts/inspect_airfoil_geometry.py
 ```
 
+Write a small rectangular Plot3D feasibility artifact for future mesh-workflow inspection:
+
+```bash
+python scripts/write_plot3d_feasibility_mesh.py
+```
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.

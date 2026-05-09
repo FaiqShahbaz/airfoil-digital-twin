@@ -13,6 +13,15 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - Do not proceed to meshing if the 2D geometry or STL bounds, span, closure, or visual shape looks wrong.
 - This inspection is not CFD validation and does not replace mesh-quality or solver checks.
 
+## Plot3D Structured Mesh Feasibility
+
+- `pyHyp` was not available from pip in the current environment.
+- Conda `gmsh` / `python-gmsh` installation was paused due to heavy dependency downloads and network/SSL/timeouts.
+- The configured OpenFOAM Docker image includes `plot3dToFoam`, so generated Plot3D artifacts are a possible future conversion path.
+- First generate and inspect a local rectangular Plot3D artifact with `python scripts/write_plot3d_feasibility_mesh.py`.
+- The current Plot3D artifact is not an airfoil mesh, does not define boundary conditions, and is not CFD validation.
+- Do not proceed to airfoil mesh generation until the Plot3D artifact format and conversion approach are reviewed.
+
 ## Manual Checks
 
 - Define and review the mesh generation strategy before running `blockMesh` or any mesh tool.
