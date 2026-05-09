@@ -56,6 +56,14 @@ The first manual Gmsh airfoil mesh conversion and `checkMesh` record is document
 
 The provisional OpenFOAM patch and 2D-boundary strategy is documented in `docs/openfoam_patch_strategy.md`.
 
+After manual Gmsh conversion, update first-path strict-2D patch types only with:
+
+```bash
+python scripts/update_airfoil_boundary_patches.py --boundary-file simulations/gmsh_airfoil_proto/constant/polyMesh/boundary
+```
+
+Re-run `checkMesh` manually after patch-type changes; this does not create solver boundary conditions.
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.

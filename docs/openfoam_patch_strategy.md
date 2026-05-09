@@ -11,16 +11,18 @@ This document records the provisional patch and 2D-boundary strategy for the fir
 | `outlet` | Gmsh farfield right boundary | `patch` | Pressure/outflow boundary | Not validated; outlet values not written |
 | `top` | Gmsh farfield upper boundary | `patch` | Farfield upper boundary | Not validated; slip/farfield strategy undecided |
 | `bottom` | Gmsh farfield lower boundary | `patch` | Farfield lower boundary | Not validated; slip/farfield strategy undecided |
-| `front` | Gmsh extrusion front face | `empty` or `symmetryPlane`, decision deferred | Spanwise front boundary for 2D or thin-3D workflow | Not validated; solver compatibility not reviewed |
-| `back` | Gmsh extrusion back face | `empty` or `symmetryPlane`, decision deferred | Spanwise back boundary for 2D or thin-3D workflow | Not validated; solver compatibility not reviewed |
+| `front` | Gmsh extrusion front face | `empty` for the first strict 2D path | Spanwise front boundary for strict 2D workflow | Not validated; must re-run `checkMesh` after patch-type change |
+| `back` | Gmsh extrusion back face | `empty` for the first strict 2D path | Spanwise back boundary for strict 2D workflow | Not validated; must re-run `checkMesh` after patch-type change |
 
 ## Front/Back Decision
 
-`empty` is typical for a strict 2D OpenFOAM setup, but the mesh and boundary files must be compatible with `empty` patch requirements. The mesh is currently a thin 3D extrusion with one spanwise layer, so this must be checked carefully before solver setup.
+The current decision for the first strict 2D path is `front: empty`, `back: empty`, and `airfoil: wall`. `empty` is typical for a strict 2D OpenFOAM setup, but the mesh and boundary files must be compatible with `empty` patch requirements. The mesh is currently a thin 3D extrusion with one spanwise layer, so this must be checked carefully before solver setup.
 
 `symmetryPlane` may be acceptable for thin 3D-style testing, but it is not the same as a strict 2D OpenFOAM workflow. It changes the modeling assumption and must not be treated as equivalent without review.
 
-Choose `empty` or `symmetryPlane` only after reviewing the solver setup, OpenFOAM patch requirements, converted mesh boundary file, and intended validation protocol.
+If the first strict 2D path fails OpenFOAM patch requirements, revisit `symmetryPlane` only as a separate thin-3D-style test. That would not be equivalent to strict 2D.
+
+The helper script `python scripts/update_airfoil_boundary_patches.py` updates only `front`, `back`, and `airfoil` patch types in a converted `constant/polyMesh/boundary` file. It does not create valid CFD boundary conditions.
 
 ## Boundary-Condition Intent, Not Implementation
 
@@ -34,6 +36,7 @@ Choose `empty` or `symmetryPlane` only after reviewing the solver setup, OpenFOA
 
 - Inspect the converted `constant/polyMesh/boundary` file.
 - Decide the `front` and `back` patch type.
+- Apply patch-type changes, then re-run `checkMesh` before writing solver fields.
 - Write minimal `0/U` and `0/p` only after the front/back patch decision.
 - Re-run `checkMesh` after patch-type changes.
 - Visually inspect the mesh and patch assignment.
