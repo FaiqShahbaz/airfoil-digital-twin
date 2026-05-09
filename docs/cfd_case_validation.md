@@ -23,6 +23,12 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - The current Plot3D artifact is not an airfoil mesh, does not define boundary conditions, and is not CFD validation.
 - Do not proceed to airfoil mesh generation until the Plot3D artifact format and conversion approach are reviewed.
 
+## Gmsh CLI Conversion Feasibility
+
+- See `docs/gmsh_conversion_feasibility.md` for the manual rectangular 3D Gmsh-to-OpenFOAM conversion record.
+- Generate the deterministic Gmsh `.geo` feasibility artifact with `python scripts/write_gmsh_feasibility_geo.py`.
+- The generated `.geo` is a thin rectangular volume only, not an airfoil mesh and not CFD validation.
+
 ## Manual Checks
 
 - Define and review the mesh generation strategy before running `blockMesh` or any mesh tool.

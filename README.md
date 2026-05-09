@@ -40,6 +40,12 @@ Write a small rectangular Plot3D feasibility artifact for future mesh-workflow i
 python scripts/write_plot3d_feasibility_mesh.py
 ```
 
+Write a deterministic Gmsh CLI rectangular feasibility geometry:
+
+```bash
+python scripts/write_gmsh_feasibility_geo.py
+```
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.
