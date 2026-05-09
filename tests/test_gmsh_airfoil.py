@@ -1,11 +1,24 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 
-from airfoil_dt.mesh.gmsh_airfoil import AIRFOIL_PHYSICAL_SURFACES, write_naca0012_airfoil_proto_geo
+import numpy as np
+import pytest
+
+from airfoil_dt.mesh.gmsh_airfoil import (
+    AIRFOIL_PHYSICAL_SURFACES,
+    DEFAULT_AIRFOIL_POINT_TOLERANCE,
+    sanitize_closed_airfoil_loop_points,
+    write_naca0012_airfoil_proto_geo,
+)
+
+
+POINT_PATTERN = re.compile(r"Point\((\d+)\) = \{([^,]+), ([^,]+), 0, airfoil_lc\};")
+LINE_PATTERN = re.compile(r"Line\((\d+)\) = \{(\d+), (\d+)\};")
 
 
 def test_write_gmsh_airfoil_proto_creates_files(tmp_path: Path) -> None:
@@ -58,6 +71,9 @@ def test_write_gmsh_airfoil_proto_metadata(tmp_path: Path) -> None:
     assert metadata["gmsh_python_required"] is False
     assert metadata["physical_surfaces"] == AIRFOIL_PHYSICAL_SURFACES
     assert metadata["physical_volume"] == "fluid"
+    assert metadata["requested_airfoil_n_points"] == 40
+    assert metadata["airfoil_point_count_used"] > 4
+    assert metadata["airfoil_point_sanitization_tolerance"] == pytest.approx(DEFAULT_AIRFOIL_POINT_TOLERANCE)
     assert metadata["intended_gmsh_command"] == (
         "gmsh results/mesh_feasibility/naca0012_airfoil_proto.geo -3 -format msh2 "
         "-o results/mesh_feasibility/naca0012_airfoil_proto.msh"
@@ -66,6 +82,64 @@ def test_write_gmsh_airfoil_proto_metadata(tmp_path: Path) -> None:
         "gmshToFoam -case /case naca0012_airfoil_proto.msh",
         "checkMesh -case /case",
     ]
+
+
+def test_sanitize_closed_airfoil_loop_removes_duplicate_first_last_point() -> None:
+    x_values = np.array([0.0, 1.0, 1.0, 0.0, 0.0])
+    y_values = np.array([0.0, 0.0, 1.0, 1.0, 0.0])
+
+    sanitized_x, sanitized_y = sanitize_closed_airfoil_loop_points(x_values, y_values)
+
+    assert len(sanitized_x) == 4
+    assert (sanitized_x[-1], sanitized_y[-1]) == pytest.approx((0.0, 1.0))
+
+
+def test_sanitize_closed_airfoil_loop_removes_consecutive_duplicate_points() -> None:
+    x_values = np.array([0.0, 1.0, 1.0, 1.0, 0.0])
+    y_values = np.array([0.0, 0.0, 0.0, 1.0, 1.0])
+
+    sanitized_x, sanitized_y = sanitize_closed_airfoil_loop_points(x_values, y_values)
+
+    assert list(zip(sanitized_x, sanitized_y, strict=True)) == pytest.approx(
+        [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    )
+
+
+def test_sanitize_closed_airfoil_loop_rejects_fewer_than_four_points() -> None:
+    with pytest.raises(ValueError):
+        sanitize_closed_airfoil_loop_points([0.0, 1.0, 0.0], [0.0, 0.0, 1.0])
+
+
+def test_sanitize_closed_airfoil_loop_rejects_near_zero_emitted_segment() -> None:
+    with pytest.raises(ValueError):
+        sanitize_closed_airfoil_loop_points(
+            [0.0, 1.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 1.0e-12],
+            tolerance=1.0e-10,
+        )
+
+
+def test_write_gmsh_airfoil_proto_has_no_zero_length_airfoil_lines(tmp_path: Path) -> None:
+    geo_path, _ = write_naca0012_airfoil_proto_geo(
+        tmp_path / "naca0012_airfoil_proto.geo",
+        tmp_path / "naca0012_airfoil_proto_metadata.json",
+    )
+    contents = geo_path.read_text(encoding="utf-8")
+    points = {
+        int(point_id): (float(x_value), float(y_value))
+        for point_id, x_value, y_value in POINT_PATTERN.findall(contents)
+    }
+    airfoil_lines = [
+        (int(start_point), int(end_point))
+        for _, start_point, end_point in LINE_PATTERN.findall(contents)
+        if int(start_point) >= 1000 and int(end_point) >= 1000
+    ]
+
+    assert airfoil_lines
+    for start_point, end_point in airfoil_lines:
+        x_start, y_start = points[start_point]
+        x_end, y_end = points[end_point]
+        assert np.hypot(x_end - x_start, y_end - y_start) >= DEFAULT_AIRFOIL_POINT_TOLERANCE
 
 
 def test_write_gmsh_airfoil_proto_script_runs_successfully() -> None:

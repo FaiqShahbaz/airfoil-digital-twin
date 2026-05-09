@@ -13,10 +13,55 @@ from airfoil_dt.geometry.naca4 import generate_naca4
 GMSH_AIRFOIL_PROTOTYPE_WARNING = "Gmsh airfoil prototype geometry only; not CFD validation."
 AIRFOIL_PHYSICAL_SURFACES = ["front", "back", "inlet", "outlet", "top", "bottom", "airfoil"]
 AIRFOIL_PHYSICAL_VOLUME = "fluid"
+DEFAULT_AIRFOIL_POINT_TOLERANCE = 1.0e-10
 
 
 def _format_geo_number(value: float) -> str:
     return f"{value:.12g}"
+
+
+def sanitize_closed_airfoil_loop_points(
+    x_values,
+    y_values,
+    tolerance: float = DEFAULT_AIRFOIL_POINT_TOLERANCE,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Remove duplicate points that would create invalid Gmsh loop segments."""
+    if tolerance <= 0.0:
+        raise ValueError("tolerance must be greater than zero")
+
+    x_array = np.asarray(x_values, dtype=np.float64)
+    y_array = np.asarray(y_values, dtype=np.float64)
+    if x_array.shape != y_array.shape or x_array.ndim != 1:
+        raise ValueError("x_values and y_values must be one-dimensional arrays with equal length")
+    if not np.all(np.isfinite(x_array)) or not np.all(np.isfinite(y_array)):
+        raise ValueError("airfoil loop points must be finite")
+
+    points: list[tuple[float, float]] = []
+    for x_value, y_value in zip(x_array, y_array, strict=True):
+        point = (float(x_value), float(y_value))
+        if not points:
+            points.append(point)
+            continue
+        previous = points[-1]
+        if np.hypot(point[0] - previous[0], point[1] - previous[1]) >= tolerance:
+            points.append(point)
+
+    if len(points) >= 2:
+        first = points[0]
+        last = points[-1]
+        if np.hypot(last[0] - first[0], last[1] - first[1]) < tolerance:
+            points.pop()
+
+    if len(points) < 4:
+        raise ValueError("sanitized airfoil loop must contain at least 4 points")
+
+    for index, point in enumerate(points):
+        next_point = points[(index + 1) % len(points)]
+        if np.hypot(next_point[0] - point[0], next_point[1] - point[1]) < tolerance:
+            raise ValueError("sanitized airfoil loop contains a near-zero segment")
+
+    sanitized = np.asarray(points, dtype=np.float64)
+    return sanitized[:, 0], sanitized[:, 1]
 
 
 def write_naca0012_airfoil_proto_geo(
@@ -28,7 +73,8 @@ def write_naca0012_airfoil_proto_geo(
     farfield_bounds: tuple[float, float, float, float] = (-5.0, 10.0, -5.0, 5.0),
     airfoil_lc: float = 0.02,
     farfield_lc: float = 1.0,
-    n_points: int = 80,
+    n_points: int = 40,
+    point_tolerance: float = DEFAULT_AIRFOIL_POINT_TOLERANCE,
 ) -> tuple[Path, Path]:
     """Write a first Gmsh `.geo` prototype for NACA 0012 in a farfield box."""
     if span <= 0.0:
@@ -41,8 +87,11 @@ def write_naca0012_airfoil_proto_geo(
         raise ValueError("farfield bounds must be strictly increasing")
 
     geometry = generate_naca4(naca_code, n_points=n_points, finite_te=finite_te)
-    surface_x = np.asarray(geometry.surface_x, dtype=np.float64)
-    surface_y = np.asarray(geometry.surface_y, dtype=np.float64)
+    surface_x, surface_y = sanitize_closed_airfoil_loop_points(
+        geometry.surface_x,
+        geometry.surface_y,
+        tolerance=point_tolerance,
+    )
 
     output_geo = Path(geo_path)
     output_metadata = Path(metadata_path)
@@ -133,6 +182,9 @@ def write_naca0012_airfoil_proto_geo(
         "physical_surfaces": AIRFOIL_PHYSICAL_SURFACES,
         "physical_volume": AIRFOIL_PHYSICAL_VOLUME,
         "gmsh_python_required": False,
+        "requested_airfoil_n_points": n_points,
+        "airfoil_point_count_used": int(surface_x.size),
+        "airfoil_point_sanitization_tolerance": point_tolerance,
         "intended_gmsh_command": (
             "gmsh results/mesh_feasibility/naca0012_airfoil_proto.geo -3 -format msh2 "
             "-o results/mesh_feasibility/naca0012_airfoil_proto.msh"
