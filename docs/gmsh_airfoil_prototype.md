@@ -30,3 +30,5 @@ An earlier unsanitized prototype failed during Gmsh curve-loop construction with
 ## Next Manual Gate
 
 The next manual gate is `gmsh` to `gmshToFoam` to `checkMesh` to mesh/patch inspection. Passing that gate would still not validate CFD results; boundary conditions, mesh quality, turbulence choices, convergence, and reference comparisons remain separate validation steps.
+
+The first sanitized prototype mesh-conversion and `checkMesh` result is recorded in `docs/gmsh_airfoil_mesh_check.md`.

@@ -52,6 +52,8 @@ Write the first Gmsh CLI NACA 0012 airfoil prototype geometry:
 python scripts/write_gmsh_airfoil_proto_geo.py
 ```
 
+The first manual Gmsh airfoil mesh conversion and `checkMesh` record is documented in `docs/gmsh_airfoil_mesh_check.md`; it is not CFD validation.
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.
