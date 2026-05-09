@@ -56,7 +56,7 @@ The generated `.msh` from the earlier failed unsanitized attempt should not be u
 ## Next Validation Gate
 
 - Review the converted mesh and patch layout visually.
-- Decide and document `front`/`back` treatment for a 2D workflow.
+- Decide and document `front`/`back` treatment for a 2D workflow; see `docs/openfoam_patch_strategy.md`.
 - Add boundary-condition files only after patch semantics are reviewed.
 - Implement and inspect boundary-layer refinement before any solver use.
 - Re-run `gmshToFoam` and `checkMesh` after mesh-quality changes.

@@ -30,6 +30,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - The generated `.geo` is a thin rectangular volume only, not an airfoil mesh and not CFD validation.
 - See `docs/gmsh_airfoil_prototype.md` for the first NACA 0012 Gmsh airfoil geometry prototype and its next manual conversion gate.
 - See `docs/gmsh_airfoil_mesh_check.md` for the first successful manual Gmsh airfoil mesh conversion and `checkMesh` record, including limitations.
+- See `docs/openfoam_patch_strategy.md` for the provisional patch and 2D-boundary strategy before any solver setup.
 
 ## Manual Checks
 
