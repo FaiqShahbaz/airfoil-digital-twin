@@ -56,6 +56,10 @@ def write_rectangular_plot3d(
             for start in range(0, flattened.size, 6):
                 values = " ".join(f"{value:.12g}" for value in flattened[start : start + 6])
                 plot3d_file.write(f"{values}\n")
+        blanking_values = np.ones(ni * nj * nk, dtype=np.int32)
+        for start in range(0, blanking_values.size, 12):
+            values = " ".join(str(value) for value in blanking_values[start : start + 12])
+            plot3d_file.write(f"{values}\n")
 
     metadata = {
         "ni": ni,
@@ -68,6 +72,7 @@ def write_rectangular_plot3d(
         "y_max": float(np.max(y_grid)),
         "z_min": float(np.min(z_grid)),
         "z_max": float(np.max(z_grid)),
+        "blanking": "all_active",
         "warning": PLOT3D_FEASIBILITY_WARNING,
     }
     json_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")

@@ -19,6 +19,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - Conda `gmsh` / `python-gmsh` installation was paused due to heavy dependency downloads and network/SSL/timeouts.
 - The configured OpenFOAM Docker image includes `plot3dToFoam`, so generated Plot3D artifacts are a possible future conversion path.
 - First generate and inspect a local rectangular Plot3D artifact with `python scripts/write_plot3d_feasibility_mesh.py`.
+- The feasibility `.xyz` includes all-active blanking/iblank values so OpenFOAM `plot3dToFoam` can read the expected x, y, z, and blanking arrays in a later conversion test.
 - The current Plot3D artifact is not an airfoil mesh, does not define boundary conditions, and is not CFD validation.
 - Do not proceed to airfoil mesh generation until the Plot3D artifact format and conversion approach are reviewed.
 
