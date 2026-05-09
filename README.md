@@ -46,6 +46,12 @@ Write a deterministic Gmsh CLI rectangular feasibility geometry:
 python scripts/write_gmsh_feasibility_geo.py
 ```
 
+Write the first Gmsh CLI NACA 0012 airfoil prototype geometry:
+
+```bash
+python scripts/write_gmsh_airfoil_proto_geo.py
+```
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.
