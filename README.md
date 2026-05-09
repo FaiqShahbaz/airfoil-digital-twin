@@ -64,6 +64,8 @@ python scripts/update_airfoil_boundary_patches.py --boundary-file simulations/gm
 
 Re-run `checkMesh` manually after patch-type changes; this does not create solver boundary conditions.
 
+The first strict 2D patch update and post-update `checkMesh` record is documented in `docs/openfoam_2d_patch_check.md`; it is not CFD validation.
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.

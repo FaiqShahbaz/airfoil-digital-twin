@@ -24,6 +24,8 @@ If the first strict 2D path fails OpenFOAM patch requirements, revisit `symmetry
 
 The helper script `python scripts/update_airfoil_boundary_patches.py` updates only `front`, `back`, and `airfoil` patch types in a converted `constant/polyMesh/boundary` file. It does not create valid CFD boundary conditions.
 
+The first manual patch update and post-update `checkMesh` gate are recorded in `docs/openfoam_2d_patch_check.md`.
+
 ## Boundary-Condition Intent, Not Implementation
 
 - `inlet` likely uses fixedValue velocity and zeroGradient pressure.
