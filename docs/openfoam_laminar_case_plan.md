@@ -74,6 +74,18 @@ The generated field/system files still require OpenFOAM parsing and smoke testin
 
 The first manual OpenFOAM parsing and post-file `checkMesh` gate for these generated files is recorded in `docs/openfoam_laminar_parse_check.md`.
 
+## First simpleFoam Smoke-Test Failure
+
+A temporary regenerated case started `simpleFoam` successfully: it created time, created the mesh for time `0`, read `p`, read `U`, read/calculated `phi`, selected incompressible Newtonian transport, selected the laminar model, started the time loop, and reached `Time = 1`.
+
+The run then stopped because `system/fvSchemes/divSchemes` was missing the required viscous stress divergence entry `div((nuEff*dev2(T(grad(U)))))`. The writer now includes:
+
+```text
+div((nuEff*dev2(T(grad(U))))) Gauss linear;
+```
+
+This was a case-file plumbing issue only. It does not establish convergence, validation, force coefficients, or dataset readiness.
+
 ## Stopping Rules
 
 - If `checkMesh` fails, stop.

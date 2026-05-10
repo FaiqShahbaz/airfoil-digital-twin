@@ -149,6 +149,7 @@ divSchemes
 {
     default none;
     div(phi,U) Gauss linearUpwind grad(U);
+    div((nuEff*dev2(T(grad(U))))) Gauss linear;
 }
 
 laplacianSchemes

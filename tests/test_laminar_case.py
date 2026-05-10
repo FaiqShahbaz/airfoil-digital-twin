@@ -69,6 +69,14 @@ def test_control_dict_contains_simple_foam_and_no_force_function(tmp_path: Path)
     assert "forceCoeffs" not in contents
 
 
+def test_fv_schemes_contains_required_divergence_schemes(tmp_path: Path) -> None:
+    write_laminar_case_files(tmp_path)
+    contents = (tmp_path / "system/fvSchemes").read_text(encoding="utf-8")
+
+    assert "div(phi,U) Gauss linearUpwind grad(U);" in contents
+    assert "div((nuEff*dev2(T(grad(U))))) Gauss linear;" in contents
+
+
 def test_writer_does_not_create_constant_polymesh(tmp_path: Path) -> None:
     write_laminar_case_files(tmp_path)
 

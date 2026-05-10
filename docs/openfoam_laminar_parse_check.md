@@ -87,3 +87,15 @@ docker run --rm -v <local-case-dir>:/case opencfd/openfoam-run:2412 openfoam2412
 - Stop on any fatal error or divergence.
 - Do not interpret force or flow values as validation.
 - Do not collect data or scale cases from this smoke test.
+
+## First simpleFoam Smoke-Test Failure
+
+A temporary regenerated case reached `Time = 1` in `simpleFoam` after reading mesh, `p`, `U`, `phi`, Newtonian transport, and the laminar model. It then failed because `system/fvSchemes/divSchemes` did not include `div((nuEff*dev2(T(grad(U)))))`.
+
+The fix is to include the viscous stress divergence scheme:
+
+```text
+div((nuEff*dev2(T(grad(U))))) Gauss linear;
+```
+
+No convergence, validation, forces, or dataset generation resulted from that failed smoke test.

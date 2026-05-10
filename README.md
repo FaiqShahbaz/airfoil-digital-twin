@@ -78,6 +78,8 @@ These files still require manual OpenFOAM parsing/checks and are not CFD validat
 
 The first manual OpenFOAM parsing and post-file `checkMesh` gate for the laminar smoke-test files is recorded in `docs/openfoam_laminar_parse_check.md`.
 
+The first `simpleFoam` smoke test reached `Time = 1` before exposing a missing `fvSchemes` divergence entry; this is documented as a plumbing issue, not CFD validation.
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.

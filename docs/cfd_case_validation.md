@@ -36,6 +36,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/openfoam_laminar_case_plan.md` for the planned first minimal laminar case files and stopping rules before any solver run.
 - The laminar case-file writer creates only text files for a smoke-test setup; OpenFOAM parsing and `checkMesh` must still be run manually before solver use.
 - See `docs/openfoam_laminar_parse_check.md` for the first successful OpenFOAM parsing and post-file `checkMesh` gate for the generated laminar smoke-test files.
+- The first `simpleFoam` smoke test reached `Time = 1` but stopped on a missing viscous divergence scheme; this was a plumbing issue, not validation.
 
 ## Manual Checks
 
