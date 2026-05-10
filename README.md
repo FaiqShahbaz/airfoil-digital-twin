@@ -66,6 +66,8 @@ Re-run `checkMesh` manually after patch-type changes; this does not create solve
 
 The first strict 2D patch update and post-update `checkMesh` record is documented in `docs/openfoam_2d_patch_check.md`; it is not CFD validation.
 
+The planned first minimal laminar OpenFOAM case files are documented in `docs/openfoam_laminar_case_plan.md`; no solver setup has been created yet.
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.

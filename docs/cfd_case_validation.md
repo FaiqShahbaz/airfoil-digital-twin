@@ -33,6 +33,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/openfoam_patch_strategy.md` for the provisional patch and 2D-boundary strategy before any solver setup.
 - Patch-type updates must be followed by `checkMesh` before any field files or solver setup are added.
 - See `docs/openfoam_2d_patch_check.md` for the first successful strict 2D patch update and post-update `checkMesh` record.
+- See `docs/openfoam_laminar_case_plan.md` for the planned first minimal laminar case files and stopping rules before any solver run.
 
 ## Manual Checks
 
