@@ -92,6 +92,8 @@ After adding the missing viscous divergence scheme, a fresh temporary case ran `
 
 That result is still only a plumbing smoke test. It does not establish convergence, force coefficients, physical validation, or dataset readiness.
 
+ParaView visual inspection then showed the current mesh is too coarse and lacks boundary-layer refinement. Field and force interpretation on this mesh are stopped; see `docs/mesh_visual_inspection.md`.
+
 ## Stopping Rules
 
 - If `checkMesh` fails, stop.

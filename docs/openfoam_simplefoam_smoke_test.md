@@ -51,8 +51,6 @@ time step continuity errors: sum local = 0.00047749181, global = -9.7075633e-05,
 
 ## Next Validation Gate
 
-- Inspect fields visually and numerically.
-- Consider a longer residual-only run only after documenting residual and stopping criteria.
-- Add force function objects later only for diagnostic output, not validation.
-- Compare against reference data only after mesh, boundary-condition, and turbulence-model decisions are reviewed.
-- Do not collect data or scale cases from this smoke test.
+The mesh was visually inspected in ParaView after this smoke test. That inspection found the mesh too coarse for field interpretation, force coefficients, validation, or dataset generation. See `docs/mesh_visual_inspection.md`.
+
+Field inspection from this smoke run is deferred. The next gate is mesh refinement and boundary-layer strategy before any further solver interpretation.

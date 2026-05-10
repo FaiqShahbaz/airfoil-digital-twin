@@ -38,6 +38,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/openfoam_laminar_parse_check.md` for the first successful OpenFOAM parsing and post-file `checkMesh` gate for the generated laminar smoke-test files.
 - The first `simpleFoam` smoke test reached `Time = 1` but stopped on a missing viscous divergence scheme; this was a plumbing issue, not validation.
 - See `docs/openfoam_simplefoam_smoke_test.md` for the first successful 5-iteration `simpleFoam` plumbing smoke test; it is not convergence or CFD validation.
+- See `docs/mesh_visual_inspection.md` for the ParaView mesh inspection that stops field/force interpretation on the current coarse mesh.
 
 ## Manual Checks
 
