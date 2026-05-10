@@ -27,7 +27,7 @@ The first minimal case setup will need these files after mesh conversion and pat
 - `system/fvSchemes`
 - `system/fvSolution`
 
-Do not create these files until the converted boundary file and patch types are reviewed.
+The narrow writer `python scripts/write_laminar_case_files.py --case-dir simulations/gmsh_airfoil_proto` creates these files after the converted boundary file and patch types are reviewed. It does not create or edit `constant/polyMesh`, does not run OpenFOAM, and does not validate CFD.
 
 ## Boundary-Condition Intent
 
@@ -42,6 +42,8 @@ These are intended starting points, not validated boundary conditions.
 | `outlet` | `zeroGradient` | `fixedValue uniform 0` | Plausible pressure outlet, not validated |
 | `top` | provisional farfield/slip/symmetry/freestream choice | provisional farfield/slip/symmetry/freestream choice | Not finalized |
 | `bottom` | provisional farfield/slip/symmetry/freestream choice | provisional farfield/slip/symmetry/freestream choice | Not finalized |
+
+For the first writer implementation, `top` and `bottom` use freestream-like fixedValue velocity `(15 0 0)` and `zeroGradient` pressure. This is provisional and still requires OpenFOAM parsing, smoke testing, and review.
 
 ## Top/Bottom Risk
 
@@ -67,6 +69,8 @@ The first solver setup should remain laminar/simple if possible to reduce moving
 7. Create field and system files only after boundary review.
 8. Run `checkMesh` again after case-file changes.
 9. Only then consider a very short solver smoke test.
+
+The generated field/system files still require OpenFOAM parsing and smoke testing. Passing those steps would not establish physical validation.
 
 ## Stopping Rules
 

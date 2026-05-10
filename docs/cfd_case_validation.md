@@ -34,6 +34,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - Patch-type updates must be followed by `checkMesh` before any field files or solver setup are added.
 - See `docs/openfoam_2d_patch_check.md` for the first successful strict 2D patch update and post-update `checkMesh` record.
 - See `docs/openfoam_laminar_case_plan.md` for the planned first minimal laminar case files and stopping rules before any solver run.
+- The laminar case-file writer creates only text files for a smoke-test setup; OpenFOAM parsing and `checkMesh` must still be run manually before solver use.
 
 ## Manual Checks
 

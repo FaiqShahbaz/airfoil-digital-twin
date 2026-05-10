@@ -68,6 +68,14 @@ The first strict 2D patch update and post-update `checkMesh` record is documente
 
 The planned first minimal laminar OpenFOAM case files are documented in `docs/openfoam_laminar_case_plan.md`; no solver setup has been created yet.
 
+After mesh conversion, patch updates, and boundary review, write minimal laminar smoke-test files with:
+
+```bash
+python scripts/write_laminar_case_files.py --case-dir simulations/gmsh_airfoil_proto
+```
+
+These files still require manual OpenFOAM parsing/checks and are not CFD validation.
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.
