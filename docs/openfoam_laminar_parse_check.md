@@ -99,3 +99,9 @@ div((nuEff*dev2(T(grad(U))))) Gauss linear;
 ```
 
 No convergence, validation, forces, or dataset generation resulted from that failed smoke test.
+
+## Follow-Up Smoke Test
+
+After the missing viscous divergence scheme was added, a fresh temporary case ran `simpleFoam` through `Time = 5` and ended cleanly. See `docs/openfoam_simplefoam_smoke_test.md`.
+
+That follow-up remains a plumbing smoke test only; it does not establish convergence, validation, forces, or dataset readiness.

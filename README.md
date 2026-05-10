@@ -80,6 +80,8 @@ The first manual OpenFOAM parsing and post-file `checkMesh` gate for the laminar
 
 The first `simpleFoam` smoke test reached `Time = 1` before exposing a missing `fvSchemes` divergence entry; this is documented as a plumbing issue, not CFD validation.
 
+The first successful 5-iteration `simpleFoam` plumbing smoke test is recorded in `docs/openfoam_simplefoam_smoke_test.md`; it is not convergence or CFD validation.
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.

@@ -86,6 +86,12 @@ div((nuEff*dev2(T(grad(U))))) Gauss linear;
 
 This was a case-file plumbing issue only. It does not establish convergence, validation, force coefficients, or dataset readiness.
 
+## First 5-Iteration simpleFoam Smoke Test
+
+After adding the missing viscous divergence scheme, a fresh temporary case ran `simpleFoam` from `Time = 1` through `Time = 5` and ended cleanly. The run is recorded in `docs/openfoam_simplefoam_smoke_test.md`.
+
+That result is still only a plumbing smoke test. It does not establish convergence, force coefficients, physical validation, or dataset readiness.
+
 ## Stopping Rules
 
 - If `checkMesh` fails, stop.
