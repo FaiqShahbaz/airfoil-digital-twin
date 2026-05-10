@@ -76,6 +76,8 @@ python scripts/write_laminar_case_files.py --case-dir simulations/gmsh_airfoil_p
 
 These files still require manual OpenFOAM parsing/checks and are not CFD validation.
 
+The first manual OpenFOAM parsing and post-file `checkMesh` gate for the laminar smoke-test files is recorded in `docs/openfoam_laminar_parse_check.md`.
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.

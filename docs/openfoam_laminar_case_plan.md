@@ -72,6 +72,8 @@ The first solver setup should remain laminar/simple if possible to reduce moving
 
 The generated field/system files still require OpenFOAM parsing and smoke testing. Passing those steps would not establish physical validation.
 
+The first manual OpenFOAM parsing and post-file `checkMesh` gate for these generated files is recorded in `docs/openfoam_laminar_parse_check.md`.
+
 ## Stopping Rules
 
 - If `checkMesh` fails, stop.
