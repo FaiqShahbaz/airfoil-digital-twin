@@ -22,14 +22,18 @@ This document records the ParaView visual mesh inspection after the first 5-iter
 
 Field inspection from the 5-iteration smoke run is deferred because mesh quality is not adequate. Further interpretation of flow values, residual behavior beyond plumbing, or forces on this mesh should stop.
 
-The next priority is mesh refinement and boundary-layer strategy, not force extraction or field analysis.
+The current Gmsh mesh and `simpleFoam` case are not the validation base case. The next validation-base-case direction is a NASA/TMR plus Ladson NACA 0012 reference setup, recorded in `docs/validation_base_case_decision.md`.
+
+The next priority is reference-guided mesh and setup research, not force extraction or field analysis on this mesh.
 
 ## Next Mesh-Improvement Gate
 
-- Investigate boundary-layer or prism-layer options in a Gmsh/OpenFOAM-compatible workflow.
-- Rerun `gmshToFoam` after mesh changes.
-- Apply the patch updater.
-- Rerun `checkMesh`.
+- Locate the NASA/TMR NACA 0012 case page and data.
+- Locate the Ladson NASA TM 4074 data/source.
+- Inspect available grid formats and reference data.
+- Determine whether direct grid conversion to OpenFOAM is feasible.
+- Otherwise design a local NASA-like C-grid or O-grid workflow.
+- Ensure the mesh is boundary-layer-resolved and follows reference farfield/domain guidance rather than the current small rectangle.
 - Visually inspect the mesh again in ParaView.
 - Only then consider another solver smoke test.
 
@@ -41,3 +45,4 @@ The next priority is mesh refinement and boundary-layer strategy, not force extr
 - Farfield boundaries may be too close.
 - Top/bottom boundary conditions are still provisional.
 - Laminar `Re=1e6` is not physical validation.
+- The current Gmsh prototype is insufficient for NASA/TMR-style NACA 0012 validation.

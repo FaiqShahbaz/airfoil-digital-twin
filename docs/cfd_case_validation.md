@@ -4,6 +4,14 @@ The current Gate 2 NACA 0012 case is a scaffold only. It is not CFD-valid yet, a
 
 Before scaling to more cases, validate one or two local OpenFOAM cases with the configured Docker image.
 
+## Validation Base Case Decision
+
+- The current Gmsh mesh and minimal `simpleFoam` case are not the validation base case.
+- The current case remains a solver-plumbing smoke test only.
+- The serious validation base case should pivot to a NASA/TMR NACA 0012 validation setup with Ladson NASA TM 4074 as the preferred experimental/reference anchor.
+- Provisional target conditions are NACA0012, Mach `0.15`, Reynolds number `6e6`, chord `1`, fully turbulent RANS, with `Cp`, `Cl`, and `Cd` as validation outputs.
+- See `docs/validation_base_case_decision.md` for the decision record, mesh implications, research gate, stopping rules, and citation placeholders.
+
 ## Geometry/STL Inspection Before Meshing
 
 - Run `python scripts/inspect_airfoil_geometry.py` before attempting mesh generation.
@@ -39,6 +47,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - The first `simpleFoam` smoke test reached `Time = 1` but stopped on a missing viscous divergence scheme; this was a plumbing issue, not validation.
 - See `docs/openfoam_simplefoam_smoke_test.md` for the first successful 5-iteration `simpleFoam` plumbing smoke test; it is not convergence or CFD validation.
 - See `docs/mesh_visual_inspection.md` for the ParaView mesh inspection that stops field/force interpretation on the current coarse mesh.
+- See `docs/validation_base_case_decision.md` for the decision to pivot the validation base case to NASA/TMR plus Ladson NACA 0012 references.
 
 ## Manual Checks
 

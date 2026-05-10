@@ -84,9 +84,13 @@ The first successful 5-iteration `simpleFoam` plumbing smoke test is recorded in
 
 ParaView visual inspection found the current mesh too coarse for field or force interpretation; see `docs/mesh_visual_inspection.md`.
 
+The current Gmsh/simpleFoam case is not the validation base case. The validation-base-case decision now pivots to a NASA/TMR NACA 0012 setup with Ladson NASA TM 4074 as the preferred experimental/reference anchor; see `docs/validation_base_case_decision.md`.
+
 ## Validation-First Plan
 
 The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.
+
+The provisional serious target is NACA0012 at Mach `0.15`, Reynolds number `6e6`, chord `1`, fully turbulent RANS, with `Cp`, `Cl`, and `Cd` validation outputs. Dataset generation, ML tuning, and benchmark claims remain blocked until the validation case passes reference comparison gates.
 
 ## AI Workflow
 
