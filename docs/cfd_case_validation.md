@@ -21,6 +21,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_high_aspect_ratio_review.md` for the narrow source-backed review of that high aspect-ratio check. The finding is qualitatively expected for a stretched boundary-layer grid.
 - See `docs/tmr_naca0012_mesh_quality_acceptance.md` for the decision accepting the remaining high aspect-ratio `checkMesh` failure as a documented exception. This allows solver setup planning, but does not imply CFD validation and does not allow solver runs, force extraction, or aerodynamic claims before a separate Spalart-Allmaras baseline setup/review gate.
 - See `docs/tmr_naca0012_sa_baseline_setup_plan.md` for the documentation-only Spalart-Allmaras `simpleFoam` baseline setup plan. It allows a later implementation task to create solver dictionaries, but it does not authorize solver execution, force extraction, or validation claims.
+- See `docs/tmr_naca0012_sa_baseline_case_setup_check.md` for the copied-case SA baseline dictionary writer gate. It wrote initial/setup files and ran `checkMesh` plus dictionary reads only; no solver run, force extraction, or validation was performed.
 
 ## Geometry/STL Inspection Before Meshing
 
@@ -68,6 +69,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_high_aspect_ratio_review.md` for source-backed context on the remaining high aspect-ratio `checkMesh` failure.
 - See `docs/tmr_naca0012_mesh_quality_acceptance.md` before planning solver dictionaries. Do not modify the accepted NASA/TMR mesh to satisfy OpenFOAM's generic aspect-ratio threshold; revisit the acceptance decision if future solver instability is traceable to mesh quality.
 - See `docs/tmr_naca0012_sa_baseline_setup_plan.md` before creating any NASA/TMR SA baseline solver dictionaries. The plan does not permit `simpleFoam` runs or force claims by itself.
+- See `docs/tmr_naca0012_sa_baseline_case_setup_check.md` before any parse/dry-run or solver-run gate for the copied SA baseline case.
 
 ## Manual Checks
 

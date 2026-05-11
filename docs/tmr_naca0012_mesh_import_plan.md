@@ -48,6 +48,8 @@ Accepting this mesh-quality exception does not imply CFD validation. Solver setu
 
 The Spalart-Allmaras baseline setup plan is recorded in `docs/tmr_naca0012_sa_baseline_setup_plan.md`. It plans a later OpenFOAM `simpleFoam` implementation for the accepted mesh, but it does not create solver dictionaries, run the solver, extract forces, or make CFD validation claims.
 
+The copied-case Spalart-Allmaras baseline setup check is recorded in `docs/tmr_naca0012_sa_baseline_case_setup_check.md`. It wrote initial/setup dictionaries into a copied external case and ran only `checkMesh` plus `foamDictionary` reads. It did not run `simpleFoam`, extract forces, or validate CFD results.
+
 The first manual feasibility sequence should be:
 
 1. Download the candidate grid outside the repository under `~/Projects/airfoil-digital-twin-references/naca0012/`.
@@ -77,6 +79,7 @@ The first manual feasibility sequence should be:
 - Do not extract forces.
 - Do not generate datasets.
 - Do not run `simpleFoam` or extract force coefficients from the SA baseline plan alone; first create and review solver dictionaries in a separate implementation gate.
+- Do not run `simpleFoam` from the SA baseline setup check alone; a separate parse/dry-run or solver-run gate must explicitly allow the next command.
 - Do not start an SST branch until the Spalart-Allmaras baseline path is understood.
 - Do not make validation, benchmark, dashboard, or ML-training claims from an imported mesh before reference-comparison gates pass.
 
