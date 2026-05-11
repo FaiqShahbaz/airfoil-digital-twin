@@ -46,6 +46,8 @@ The mesh-quality acceptance decision is recorded in `docs/tmr_naca0012_mesh_qual
 
 Accepting this mesh-quality exception does not imply CFD validation. Solver setup may now be planned, but solver runs and force claims remain gated by a separate Spalart-Allmaras baseline setup/review.
 
+The Spalart-Allmaras baseline setup plan is recorded in `docs/tmr_naca0012_sa_baseline_setup_plan.md`. It plans a later OpenFOAM `simpleFoam` implementation for the accepted mesh, but it does not create solver dictionaries, run the solver, extract forces, or make CFD validation claims.
+
 The first manual feasibility sequence should be:
 
 1. Download the candidate grid outside the repository under `~/Projects/airfoil-digital-twin-references/naca0012/`.
@@ -74,6 +76,7 @@ The first manual feasibility sequence should be:
 - If future solver instability is traceable to mesh quality, revisit `docs/tmr_naca0012_mesh_quality_acceptance.md` rather than silently modifying the mesh.
 - Do not extract forces.
 - Do not generate datasets.
+- Do not run `simpleFoam` or extract force coefficients from the SA baseline plan alone; first create and review solver dictionaries in a separate implementation gate.
 - Do not start an SST branch until the Spalart-Allmaras baseline path is understood.
 - Do not make validation, benchmark, dashboard, or ML-training claims from an imported mesh before reference-comparison gates pass.
 
