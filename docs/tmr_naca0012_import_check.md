@@ -83,6 +83,8 @@ Found 115648 undefined faces in mesh; adding to default patch defaultFaces
 
 This means the current direct `plot3dToFoam -noBlank` import did not preserve or create useful named OpenFOAM patches for airfoil, farfield, wake, or spanwise front/back boundaries. Patch mapping is not understood yet.
 
+A follow-up neutral-map and geometry analysis is recorded in `docs/tmr_naca0012_patch_mapping_analysis.md`. It identifies a plausible future split, but no patch splitter has been implemented and the mapping is not yet validated by a modified OpenFOAM mesh.
+
 ## checkMesh Result
 
 `checkMesh` ran after minimal utility dictionaries were added to the external scratch case. It did not pass all checks.
@@ -147,6 +149,7 @@ The neutral map appears necessary as boundary guidance, but `plot3dToFoam` help 
 - Determine whether `plot3dToFoam` can use a neutral map, auxiliary map, or preprocessing step to preserve boundary names/ranges.
 - Investigate whether a Docker-first OpenFOAM image or external conversion path can import CGNS and preserve boundaries more reliably for the NASA/TMR grid. The configured `opencfd/openfoam-run:2412` image did not include a CGNS import utility; see `docs/tmr_naca0012_cgns_import_check.md`.
 - If PLOT3D remains the path, design a deterministic patch-splitting workflow from neutral-map ranges before solver setup.
+- Use `docs/tmr_naca0012_patch_mapping_analysis.md` as the starting point for any future patch-splitting design.
 - Identify and verify airfoil wall, farfield, wake/cut, and spanwise boundaries in OpenFOAM.
 - Decide whether spanwise patches should be changed to `empty` for a strict 2D workflow.
 - Re-run `checkMesh` after confirmed patch mapping.

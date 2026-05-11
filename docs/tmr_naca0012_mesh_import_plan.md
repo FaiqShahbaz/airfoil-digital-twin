@@ -32,6 +32,8 @@ The first controlled Family II `449x129` import check is recorded in `docs/tmr_n
 
 The first CGNS import availability check is recorded in `docs/tmr_naca0012_cgns_import_check.md`. The configured `opencfd/openfoam-run:2412` image did not include `cgnsToFoam`, `foamToCGNS`, or other CGNS-named utilities, so no CGNS conversion was attempted.
 
+The neutral-map patch mapping analysis is recorded in `docs/tmr_naca0012_patch_mapping_analysis.md`. It proposes a future split strategy for `defaultFaces`, but no splitter has been implemented and no patched mesh has been validated.
+
 The first manual feasibility sequence should be:
 
 1. Download the candidate grid outside the repository under `~/Projects/airfoil-digital-twin-references/naca0012/`.
@@ -70,6 +72,7 @@ The first manual feasibility sequence should be:
 - Do spanwise front/back patches need post-processing to become `empty`?
 - Which imported boundary corresponds to airfoil wall versus wake cut versus farfield?
 - Does the converted mesh preserve the sharp trailing-edge and wake topology without repair?
+- Can `defaultFaces` be safely split by geometric classification without corrupting OpenFOAM face and owner ordering?
 
 ## Citation And Link Placeholders
 
