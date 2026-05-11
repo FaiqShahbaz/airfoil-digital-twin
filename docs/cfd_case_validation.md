@@ -15,10 +15,11 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_import_check.md` for the first controlled Family II `449x129` import check. It is import feasibility only; direct conversion did not preserve useful boundary patches and did not pass all mesh checks.
 - See `docs/tmr_naca0012_cgns_import_check.md` for the first CGNS import availability check. The configured Docker OpenFOAM image did not include a CGNS import utility, so CGNS conversion was not attempted.
 - See `docs/tmr_naca0012_patch_mapping_analysis.md` for the documentation-only neutral-map analysis of how the imported PLOT3D `defaultFaces` patch might be split in a future implementation.
-- See `docs/tmr_naca0012_patch_split_check.md` for the first copied-case patch split result. The split produced named patches, but the mesh still failed one high-aspect-ratio check and is not solver-ready.
+- See `docs/tmr_naca0012_patch_split_check.md` for the first copied-case patch split result. The split produced named patches, but the mesh still had an unresolved high-aspect-ratio check at that gate.
 - See `docs/tmr_naca0012_patched_mesh_visual_inspection.md` for the ParaView inspection confirming the patched mesh passes the patch-specific visual gate. This does not imply solver readiness or CFD validation.
-- See `docs/tmr_naca0012_empty_patch_check.md` for the copied-case `front`/`back` to `empty` patch-type gate. OpenFOAM recognized the copied case as two-dimensional, but the mesh still failed one high-aspect-ratio check and is not solver-ready.
-- See `docs/tmr_naca0012_high_aspect_ratio_review.md` for the narrow source-backed review of that high aspect-ratio check. The finding is qualitatively expected for a stretched boundary-layer grid, but still requires an explicit OpenFOAM workflow acceptance decision before solver setup.
+- See `docs/tmr_naca0012_empty_patch_check.md` for the copied-case `front`/`back` to `empty` patch-type gate. OpenFOAM recognized the copied case as two-dimensional, but the mesh still had an unresolved high-aspect-ratio check at that gate.
+- See `docs/tmr_naca0012_high_aspect_ratio_review.md` for the narrow source-backed review of that high aspect-ratio check. The finding is qualitatively expected for a stretched boundary-layer grid.
+- See `docs/tmr_naca0012_mesh_quality_acceptance.md` for the decision accepting the remaining high aspect-ratio `checkMesh` failure as a documented exception. This allows solver setup planning, but does not imply CFD validation and does not allow solver runs, force extraction, or aerodynamic claims before a separate Spalart-Allmaras baseline setup/review gate.
 
 ## Geometry/STL Inspection Before Meshing
 
@@ -63,7 +64,8 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_patch_split_check.md` before changing patch types or creating any solver setup from the patched imported mesh.
 - See `docs/tmr_naca0012_patched_mesh_visual_inspection.md` before the next gate: deciding whether to convert `front` and `back` to `empty` on a copied external case and rerunning `checkMesh`.
 - See `docs/tmr_naca0012_empty_patch_check.md` before accepting the copied empty-span patched mesh for any solver dictionary planning.
-- See `docs/tmr_naca0012_high_aspect_ratio_review.md` before deciding whether the remaining high aspect-ratio `checkMesh` failure can be accepted for this NASA/TMR OpenFOAM workflow.
+- See `docs/tmr_naca0012_high_aspect_ratio_review.md` for source-backed context on the remaining high aspect-ratio `checkMesh` failure.
+- See `docs/tmr_naca0012_mesh_quality_acceptance.md` before planning solver dictionaries. Do not modify the accepted NASA/TMR mesh to satisfy OpenFOAM's generic aspect-ratio threshold; revisit the acceptance decision if future solver instability is traceable to mesh quality.
 
 ## Manual Checks
 

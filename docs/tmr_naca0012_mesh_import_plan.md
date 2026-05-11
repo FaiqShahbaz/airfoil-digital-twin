@@ -34,13 +34,17 @@ The first CGNS import availability check is recorded in `docs/tmr_naca0012_cgns_
 
 The neutral-map patch mapping analysis is recorded in `docs/tmr_naca0012_patch_mapping_analysis.md`. It proposed the split strategy used by the copied-case patch-splitting prototype.
 
-The first copied-case patch-splitting prototype result is recorded in `docs/tmr_naca0012_patch_split_check.md`. It produced `front`, `back`, `airfoil`, and `farfield` patches with expected counts, but the mesh still failed one high-aspect-ratio `checkMesh` check and is not solver-ready.
+The first copied-case patch-splitting prototype result is recorded in `docs/tmr_naca0012_patch_split_check.md`. It produced `front`, `back`, `airfoil`, and `farfield` patches with expected counts, but the mesh still had an unresolved high-aspect-ratio `checkMesh` check at that gate.
 
 The patched mesh ParaView inspection is recorded in `docs/tmr_naca0012_patched_mesh_visual_inspection.md`. It passed the patch-specific visual gate, but did not resolve solver readiness.
 
-The copied-case empty span patch check is recorded in `docs/tmr_naca0012_empty_patch_check.md`. It changed only `front` and `back` from `patch` to `empty` on a copied external case, and Docker OpenFOAM recognized the mesh as two-dimensional in non-empty directions. The mesh still failed one high-aspect-ratio `checkMesh` check and is not solver-ready.
+The copied-case empty span patch check is recorded in `docs/tmr_naca0012_empty_patch_check.md`. It changed only `front` and `back` from `patch` to `empty` on a copied external case, and Docker OpenFOAM recognized the mesh as two-dimensional in non-empty directions. The mesh still had an unresolved high-aspect-ratio `checkMesh` check at that gate.
 
-The high aspect-ratio review is recorded in `docs/tmr_naca0012_high_aspect_ratio_review.md`. The finding is qualitatively expected for a stretched NASA/TMR boundary-layer C-grid, but accepting the OpenFOAM `checkMesh` failure still requires an explicit workflow decision before solver setup.
+The high aspect-ratio review is recorded in `docs/tmr_naca0012_high_aspect_ratio_review.md`. The finding is qualitatively expected for a stretched NASA/TMR boundary-layer C-grid.
+
+The mesh-quality acceptance decision is recorded in `docs/tmr_naca0012_mesh_quality_acceptance.md`. The remaining high aspect-ratio `checkMesh` failure is accepted as a documented exception for this NASA/TMR wall-resolved, stretched boundary-layer C-grid. The NASA/TMR mesh must not be modified, smoothed, regenerated, coarsened, or otherwise adjusted to satisfy OpenFOAM's generic aspect-ratio threshold.
+
+Accepting this mesh-quality exception does not imply CFD validation. Solver setup may now be planned, but solver runs and force claims remain gated by a separate Spalart-Allmaras baseline setup/review.
 
 The first manual feasibility sequence should be:
 
@@ -66,6 +70,8 @@ The first manual feasibility sequence should be:
 ## Stopping Rules
 
 - Do not create solver setup files until mesh import and patch mapping are understood.
+- Do not modify the accepted NASA/TMR mesh to satisfy OpenFOAM's generic aspect-ratio threshold.
+- If future solver instability is traceable to mesh quality, revisit `docs/tmr_naca0012_mesh_quality_acceptance.md` rather than silently modifying the mesh.
 - Do not extract forces.
 - Do not generate datasets.
 - Do not start an SST branch until the Spalart-Allmaras baseline path is understood.
@@ -77,9 +83,8 @@ The first manual feasibility sequence should be:
 - Are neutral map files needed to define or preserve boundaries?
 - Is CGNS easier or more reliable than PLOT3D for this case if a Docker-first CGNS importer is available?
 - How does OpenFOAM name imported patches from this PLOT3D grid?
-- Is the remaining high aspect-ratio `checkMesh` failure acceptable for the NASA/TMR boundary-layer grid in this OpenFOAM workflow?
 - Does the copied empty-span patched mesh need a follow-up ParaView inspection before solver dictionary planning?
-- What minimal solver dictionary plan should be reviewed only after the mesh gate is accepted?
+- What minimal Spalart-Allmaras baseline solver setup should be reviewed before any solver run or force extraction?
 
 ## Citation And Link Placeholders
 
