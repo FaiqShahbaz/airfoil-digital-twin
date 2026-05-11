@@ -14,7 +14,7 @@ This is a documentation-only feasibility plan for importing a NASA/TMR NACA0012 
 - Quantities of interest include `Cl`, `Cd`, `Cp`, and `Cf`; the numerical-analysis page also includes `Cm`.
 - Grids exist in structured PLOT3D and CGNS formats.
 - Structured 3D PLOT3D grids exist as two identical planes separated by one spanwise cell.
-- The first candidate grid is `n0012_449-129.p3dfmt.gz`.
+- The first candidate grid is `n0012familyII.5.p3dfmt.gz`.
 - Pure 2D grid import should not be the first attempt because OpenFOAM expects 3D cells.
 - CGNS boundary conditions are guidance only and may not be appropriate for OpenFOAM without review.
 
@@ -26,7 +26,9 @@ This is a documentation-only feasibility plan for importing a NASA/TMR NACA0012 
 
 ## First Feasibility Target
 
-Use the 3D structured PLOT3D `449x129` grid first, starting from `n0012_449-129.p3dfmt.gz`, downloaded outside the repository.
+Use the 3D structured PLOT3D `449x129` grid first, starting from `n0012familyII.5.p3dfmt.gz`, downloaded outside the repository.
+
+The first controlled Family II `449x129` import check is recorded in `docs/tmr_naca0012_import_check.md`. Direct `plot3dToFoam -noBlank` conversion created a mesh, but patch mapping collapsed to one `defaultFaces` patch and `checkMesh` failed one high-aspect-ratio check.
 
 The first manual feasibility sequence should be:
 
