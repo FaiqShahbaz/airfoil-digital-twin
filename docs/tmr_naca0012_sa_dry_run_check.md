@@ -40,6 +40,8 @@ This does not prove solver convergence, physical correctness, force validity, or
 
 The pressure solve line with 1000 iterations and unchanged residual 0.9793601 must be treated as a warning before any real solver run.
 
+The follow-up solver-control review is recorded in `docs/tmr_naca0012_solver_control_review.md`. It did not identify a parse/setup dictionary defect, but it keeps the pressure behavior as a blocker before any real solver run.
+
 ## Force Output Policy
 
 forceCoeffs remains intentionally omitted from system/controlDict.
