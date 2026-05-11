@@ -34,6 +34,8 @@ The first CGNS import availability check is recorded in `docs/tmr_naca0012_cgns_
 
 The neutral-map patch mapping analysis is recorded in `docs/tmr_naca0012_patch_mapping_analysis.md`. It proposes a future split strategy for `defaultFaces`, but no splitter has been implemented and no patched mesh has been validated.
 
+The first copied-case patch-splitting prototype result is recorded in `docs/tmr_naca0012_patch_split_check.md`. It produced `front`, `back`, `airfoil`, and `farfield` patches with expected counts, but the mesh still failed one high-aspect-ratio `checkMesh` check and is not solver-ready.
+
 The first manual feasibility sequence should be:
 
 1. Download the candidate grid outside the repository under `~/Projects/airfoil-digital-twin-references/naca0012/`.

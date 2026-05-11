@@ -85,6 +85,8 @@ This means the current direct `plot3dToFoam -noBlank` import did not preserve or
 
 A follow-up neutral-map and geometry analysis is recorded in `docs/tmr_naca0012_patch_mapping_analysis.md`. It identifies a plausible future split, but no patch splitter has been implemented and the mapping is not yet validated by a modified OpenFOAM mesh.
 
+The first copied-case patch-split check is recorded in `docs/tmr_naca0012_patch_split_check.md`. It split `defaultFaces` into `front`, `back`, `airfoil`, and `farfield`, but the patched mesh still failed one high-aspect-ratio `checkMesh` check.
+
 ## checkMesh Result
 
 `checkMesh` ran after minimal utility dictionaries were added to the external scratch case. It did not pass all checks.
@@ -150,6 +152,7 @@ The neutral map appears necessary as boundary guidance, but `plot3dToFoam` help 
 - Investigate whether a Docker-first OpenFOAM image or external conversion path can import CGNS and preserve boundaries more reliably for the NASA/TMR grid. The configured `opencfd/openfoam-run:2412` image did not include a CGNS import utility; see `docs/tmr_naca0012_cgns_import_check.md`.
 - If PLOT3D remains the path, design a deterministic patch-splitting workflow from neutral-map ranges before solver setup.
 - Use `docs/tmr_naca0012_patch_mapping_analysis.md` as the starting point for any future patch-splitting design.
+- See `docs/tmr_naca0012_patch_split_check.md` before any next patch-type or solver-readiness step.
 - Identify and verify airfoil wall, farfield, wake/cut, and spanwise boundaries in OpenFOAM.
 - Decide whether spanwise patches should be changed to `empty` for a strict 2D workflow.
 - Re-run `checkMesh` after confirmed patch mapping.

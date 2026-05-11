@@ -158,3 +158,5 @@ Any future patch splitter should pass these checks before solver setup:
 - Prototype the splitter only after defining file rewrite invariants and tests on a copied external mesh case.
 - Re-run `checkMesh` and ParaView inspection after any patch split.
 - Do not create solver setup files until patch mapping is implemented and verified.
+
+The first prototype split on a copied external case is recorded in `docs/tmr_naca0012_patch_split_check.md`. It produced the expected patch counts and `checkMesh` recognized the four patches, but the mesh still failed one high-aspect-ratio check.

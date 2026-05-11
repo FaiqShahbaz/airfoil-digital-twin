@@ -15,6 +15,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_import_check.md` for the first controlled Family II `449x129` import check. It is import feasibility only; direct conversion did not preserve useful boundary patches and did not pass all mesh checks.
 - See `docs/tmr_naca0012_cgns_import_check.md` for the first CGNS import availability check. The configured Docker OpenFOAM image did not include a CGNS import utility, so CGNS conversion was not attempted.
 - See `docs/tmr_naca0012_patch_mapping_analysis.md` for the documentation-only neutral-map analysis of how the imported PLOT3D `defaultFaces` patch might be split in a future implementation.
+- See `docs/tmr_naca0012_patch_split_check.md` for the first copied-case patch split result. The split produced named patches, but the mesh still failed one high-aspect-ratio check and is not solver-ready.
 
 ## Geometry/STL Inspection Before Meshing
 
@@ -56,6 +57,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_import_check.md` before any solver setup from the imported NASA/TMR Family II grid.
 - See `docs/tmr_naca0012_cgns_import_check.md` before pursuing a CGNS import path with a different Docker image or external converter.
 - See `docs/tmr_naca0012_patch_mapping_analysis.md` before implementing or running any patch splitter for the imported NASA/TMR PLOT3D mesh.
+- See `docs/tmr_naca0012_patch_split_check.md` before changing patch types or creating any solver setup from the patched imported mesh.
 
 ## Manual Checks
 
