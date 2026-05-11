@@ -30,6 +30,8 @@ Use the 3D structured PLOT3D `449x129` grid first, starting from `n0012familyII.
 
 The first controlled Family II `449x129` import check is recorded in `docs/tmr_naca0012_import_check.md`. Direct `plot3dToFoam -noBlank` conversion created a mesh, but patch mapping collapsed to one `defaultFaces` patch and `checkMesh` failed one high-aspect-ratio check.
 
+The first CGNS import availability check is recorded in `docs/tmr_naca0012_cgns_import_check.md`. The configured `opencfd/openfoam-run:2412` image did not include `cgnsToFoam`, `foamToCGNS`, or other CGNS-named utilities, so no CGNS conversion was attempted.
+
 The first manual feasibility sequence should be:
 
 1. Download the candidate grid outside the repository under `~/Projects/airfoil-digital-twin-references/naca0012/`.
@@ -63,7 +65,7 @@ The first manual feasibility sequence should be:
 
 - What exact `plot3dToFoam` syntax is required for this grid?
 - Are neutral map files needed to define or preserve boundaries?
-- Is CGNS easier or more reliable than PLOT3D for this case?
+- Is CGNS easier or more reliable than PLOT3D for this case if a Docker-first CGNS importer is available?
 - How does OpenFOAM name imported patches from this PLOT3D grid?
 - Do spanwise front/back patches need post-processing to become `empty`?
 - Which imported boundary corresponds to airfoil wall versus wake cut versus farfield?

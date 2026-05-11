@@ -145,7 +145,7 @@ The neutral map appears necessary as boundary guidance, but `plot3dToFoam` help 
 ## Next Gate
 
 - Determine whether `plot3dToFoam` can use a neutral map, auxiliary map, or preprocessing step to preserve boundary names/ranges.
-- Investigate whether OpenFOAM CGNS import preserves boundaries more reliably for the NASA/TMR grid.
+- Investigate whether a Docker-first OpenFOAM image or external conversion path can import CGNS and preserve boundaries more reliably for the NASA/TMR grid. The configured `opencfd/openfoam-run:2412` image did not include a CGNS import utility; see `docs/tmr_naca0012_cgns_import_check.md`.
 - If PLOT3D remains the path, design a deterministic patch-splitting workflow from neutral-map ranges before solver setup.
 - Identify and verify airfoil wall, farfield, wake/cut, and spanwise boundaries in OpenFOAM.
 - Decide whether spanwise patches should be changed to `empty` for a strict 2D workflow.
