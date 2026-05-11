@@ -8,6 +8,8 @@ The current Gmsh mesh and minimal `simpleFoam` case are not the validation base 
 
 The preferred validation base case will instead follow a well-established NACA 0012 validation workflow anchored by NASA/TMR for CFD setup and by Ladson NASA TM 4074 for experimental aerodynamic reference data.
 
+The first mesh-import feasibility plan for this pivot is documented in `docs/tmr_naca0012_mesh_import_plan.md`.
+
 ## Why The Current Case Is Not The Base Case
 
 - ParaView visual inspection found the current mesh is very coarse.
@@ -50,6 +52,8 @@ These are provisional until the NASA/TMR case setup and Ladson data are manually
 - Determine whether direct grid conversion to OpenFOAM is feasible.
 - If direct conversion is not feasible, design a local NASA-like C-grid or O-grid workflow.
 - Document protocol checks before any force, pressure, or benchmark comparison.
+
+The first direct-import candidate is the NASA/TMR 3D structured PLOT3D `449x129` grid, `n0012_449-129.p3dfmt.gz`, stored outside the repository and tested with Docker OpenFOAM `plot3dToFoam`.
 
 ## Stopping Rules
 

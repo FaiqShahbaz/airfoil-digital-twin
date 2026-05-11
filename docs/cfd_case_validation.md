@@ -11,6 +11,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - The serious validation base case should pivot to a NASA/TMR NACA 0012 validation setup with Ladson NASA TM 4074 as the preferred experimental/reference anchor.
 - Provisional target conditions are NACA0012, Mach `0.15`, Reynolds number `6e6`, chord `1`, fully turbulent RANS, with `Cp`, `Cl`, and `Cd` as validation outputs.
 - See `docs/validation_base_case_decision.md` for the decision record, mesh implications, research gate, stopping rules, and citation placeholders.
+- See `docs/tmr_naca0012_mesh_import_plan.md` for the documentation-only plan to test importing the NASA/TMR 3D structured PLOT3D `449x129` grid with Docker OpenFOAM `plot3dToFoam`.
 
 ## Geometry/STL Inspection Before Meshing
 
@@ -48,6 +49,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/openfoam_simplefoam_smoke_test.md` for the first successful 5-iteration `simpleFoam` plumbing smoke test; it is not convergence or CFD validation.
 - See `docs/mesh_visual_inspection.md` for the ParaView mesh inspection that stops field/force interpretation on the current coarse mesh.
 - See `docs/validation_base_case_decision.md` for the decision to pivot the validation base case to NASA/TMR plus Ladson NACA 0012 references.
+- See `docs/tmr_naca0012_mesh_import_plan.md` before attempting any NASA/TMR grid download, conversion, patch mapping, `checkMesh`, or ParaView inspection.
 
 ## Manual Checks
 
