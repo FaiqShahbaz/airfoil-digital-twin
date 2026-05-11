@@ -32,11 +32,15 @@ The first controlled Family II `449x129` import check is recorded in `docs/tmr_n
 
 The first CGNS import availability check is recorded in `docs/tmr_naca0012_cgns_import_check.md`. The configured `opencfd/openfoam-run:2412` image did not include `cgnsToFoam`, `foamToCGNS`, or other CGNS-named utilities, so no CGNS conversion was attempted.
 
-The neutral-map patch mapping analysis is recorded in `docs/tmr_naca0012_patch_mapping_analysis.md`. It proposes a future split strategy for `defaultFaces`, but no splitter has been implemented and no patched mesh has been validated.
+The neutral-map patch mapping analysis is recorded in `docs/tmr_naca0012_patch_mapping_analysis.md`. It proposed the split strategy used by the copied-case patch-splitting prototype.
 
 The first copied-case patch-splitting prototype result is recorded in `docs/tmr_naca0012_patch_split_check.md`. It produced `front`, `back`, `airfoil`, and `farfield` patches with expected counts, but the mesh still failed one high-aspect-ratio `checkMesh` check and is not solver-ready.
 
-The patched mesh ParaView inspection is recorded in `docs/tmr_naca0012_patched_mesh_visual_inspection.md`. It passed the patch-specific visual gate, but `front`/`back` patch types and the high aspect-ratio finding remain unresolved.
+The patched mesh ParaView inspection is recorded in `docs/tmr_naca0012_patched_mesh_visual_inspection.md`. It passed the patch-specific visual gate, but did not resolve solver readiness.
+
+The copied-case empty span patch check is recorded in `docs/tmr_naca0012_empty_patch_check.md`. It changed only `front` and `back` from `patch` to `empty` on a copied external case, and Docker OpenFOAM recognized the mesh as two-dimensional in non-empty directions. The mesh still failed one high-aspect-ratio `checkMesh` check and is not solver-ready.
+
+The high aspect-ratio review is recorded in `docs/tmr_naca0012_high_aspect_ratio_review.md`. The finding is qualitatively expected for a stretched NASA/TMR boundary-layer C-grid, but accepting the OpenFOAM `checkMesh` failure still requires an explicit workflow decision before solver setup.
 
 The first manual feasibility sequence should be:
 
@@ -45,18 +49,18 @@ The first manual feasibility sequence should be:
 3. Attempt OpenFOAM conversion with Docker OpenFOAM `plot3dToFoam`.
 4. Inspect generated patches and boundary names/types.
 5. Identify the airfoil wall, farfield/wake boundaries, and spanwise front/back boundaries.
-6. Apply only reviewed patch-type post-processing if needed.
-7. Run `checkMesh`.
+6. Apply only reviewed patch-type post-processing on copied external cases if needed.
+7. Run `checkMesh` after each patch mapping or patch-type change.
 8. Inspect the converted mesh in ParaView.
 
 ## Success Criteria
 
 - The grid converts without manual geometry corruption.
 - Boundary patches can be identified.
-- Front/back can be made `empty` if appropriate for a strict 2D OpenFOAM workflow.
+- Front/back can be made `empty` on a copied case if appropriate for a strict 2D OpenFOAM workflow.
 - The airfoil wall can be identified.
 - Farfield and wake boundaries can be identified.
-- `checkMesh` passes after any reviewed patch-type updates.
+- `checkMesh` passes, or any remaining warning/failure is explicitly accepted with NASA/TMR grid and OpenFOAM solver rationale, after reviewed patch-type updates.
 - ParaView confirms the expected C-grid, farfield extent, boundary-layer structure, trailing-edge region, and wake structure.
 
 ## Stopping Rules
@@ -73,10 +77,9 @@ The first manual feasibility sequence should be:
 - Are neutral map files needed to define or preserve boundaries?
 - Is CGNS easier or more reliable than PLOT3D for this case if a Docker-first CGNS importer is available?
 - How does OpenFOAM name imported patches from this PLOT3D grid?
-- Do spanwise front/back patches need post-processing to become `empty`?
-- Which imported boundary corresponds to airfoil wall versus wake cut versus farfield?
-- Does the converted mesh preserve the sharp trailing-edge and wake topology without repair?
-- Can `defaultFaces` be safely split by geometric classification without corrupting OpenFOAM face and owner ordering?
+- Is the remaining high aspect-ratio `checkMesh` failure acceptable for the NASA/TMR boundary-layer grid in this OpenFOAM workflow?
+- Does the copied empty-span patched mesh need a follow-up ParaView inspection before solver dictionary planning?
+- What minimal solver dictionary plan should be reviewed only after the mesh gate is accepted?
 
 ## Citation And Link Placeholders
 

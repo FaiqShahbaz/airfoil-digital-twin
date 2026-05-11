@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from airfoil_dt.cfd.boundary_patches import AIRFOIL_2D_PATCH_TYPES, update_boundary_patch_types
+from airfoil_dt.cfd.boundary_patches import (
+    AIRFOIL_2D_PATCH_TYPES,
+    TMR_PATCH_TYPES_AFTER_SPAN_EMPTY,
+    update_boundary_patch_types,
+    update_tmr_span_patches_to_empty,
+    validate_boundary_patch_types,
+)
 
 
 BOUNDARY_TEXT = """FoamFile
@@ -67,6 +73,43 @@ BOUNDARY_TEXT = """FoamFile
         physicalType    patch;
         nFaces          20;
         startFace       140;
+    }
+)
+"""
+
+TMR_BOUNDARY_TEXT = """FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+4
+(
+    front
+    {
+        type            patch;
+        nFaces          57344;
+        startFace       114208;
+    }
+    back
+    {
+        type            patch;
+        nFaces          57344;
+        startFace       171552;
+    }
+    airfoil
+    {
+        type            wall;
+        nFaces          256;
+        startFace       228896;
+    }
+    farfield
+    {
+        type            patch;
+        nFaces          704;
+        startFace       229152;
     }
 )
 """
@@ -136,3 +179,53 @@ def test_update_airfoil_boundary_patches_script_updates_temp_file(tmp_path: Path
     assert "type            empty;" in _patch_block(updated, "front")
     assert "type            empty;" in _patch_block(updated, "back")
     assert "type            wall;" in _patch_block(updated, "airfoil")
+
+
+def test_update_tmr_span_patches_to_empty_validates_and_updates_only_front_back() -> None:
+    updated = update_tmr_span_patches_to_empty(TMR_BOUNDARY_TEXT)
+
+    validate_boundary_patch_types(updated, TMR_PATCH_TYPES_AFTER_SPAN_EMPTY)
+    assert "nFaces          57344;" in _patch_block(updated, "front")
+    assert "nFaces          57344;" in _patch_block(updated, "back")
+    assert "type            wall;" in _patch_block(updated, "airfoil")
+    assert "type            patch;" in _patch_block(updated, "farfield")
+
+
+def test_update_tmr_span_patches_rejects_unexpected_initial_type() -> None:
+    invalid = TMR_BOUNDARY_TEXT.replace("type            wall;", "type            patch;", 1)
+
+    with pytest.raises(ValueError, match="patch airfoil expected type wall"):
+        update_tmr_span_patches_to_empty(invalid)
+
+
+def test_set_tmr_span_patches_empty_script_copies_then_updates(tmp_path: Path) -> None:
+    source_case = tmp_path / "source"
+    output_case = tmp_path / "output"
+    boundary_file = source_case / "constant" / "polyMesh" / "boundary"
+    boundary_file.parent.mkdir(parents=True)
+    boundary_file.write_text(TMR_BOUNDARY_TEXT, encoding="utf-8")
+    script = Path("scripts/set_tmr_span_patches_empty.py")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--source-case",
+            str(source_case),
+            "--output-case",
+            str(output_case),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    source_text = boundary_file.read_text(encoding="utf-8")
+    output_text = (output_case / "constant" / "polyMesh" / "boundary").read_text(encoding="utf-8")
+    assert "type            patch;" in _patch_block(source_text, "front")
+    assert "type            empty;" in _patch_block(output_text, "front")
+    assert "type            empty;" in _patch_block(output_text, "back")
+    assert "type            wall;" in _patch_block(output_text, "airfoil")
+    assert "type            patch;" in _patch_block(output_text, "farfield")

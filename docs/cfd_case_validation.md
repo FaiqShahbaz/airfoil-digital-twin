@@ -17,6 +17,8 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_patch_mapping_analysis.md` for the documentation-only neutral-map analysis of how the imported PLOT3D `defaultFaces` patch might be split in a future implementation.
 - See `docs/tmr_naca0012_patch_split_check.md` for the first copied-case patch split result. The split produced named patches, but the mesh still failed one high-aspect-ratio check and is not solver-ready.
 - See `docs/tmr_naca0012_patched_mesh_visual_inspection.md` for the ParaView inspection confirming the patched mesh passes the patch-specific visual gate. This does not imply solver readiness or CFD validation.
+- See `docs/tmr_naca0012_empty_patch_check.md` for the copied-case `front`/`back` to `empty` patch-type gate. OpenFOAM recognized the copied case as two-dimensional, but the mesh still failed one high-aspect-ratio check and is not solver-ready.
+- See `docs/tmr_naca0012_high_aspect_ratio_review.md` for the narrow source-backed review of that high aspect-ratio check. The finding is qualitatively expected for a stretched boundary-layer grid, but still requires an explicit OpenFOAM workflow acceptance decision before solver setup.
 
 ## Geometry/STL Inspection Before Meshing
 
@@ -60,6 +62,8 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_patch_mapping_analysis.md` before implementing or running any patch splitter for the imported NASA/TMR PLOT3D mesh.
 - See `docs/tmr_naca0012_patch_split_check.md` before changing patch types or creating any solver setup from the patched imported mesh.
 - See `docs/tmr_naca0012_patched_mesh_visual_inspection.md` before the next gate: deciding whether to convert `front` and `back` to `empty` on a copied external case and rerunning `checkMesh`.
+- See `docs/tmr_naca0012_empty_patch_check.md` before accepting the copied empty-span patched mesh for any solver dictionary planning.
+- See `docs/tmr_naca0012_high_aspect_ratio_review.md` before deciding whether the remaining high aspect-ratio `checkMesh` failure can be accepted for this NASA/TMR OpenFOAM workflow.
 
 ## Manual Checks
 
