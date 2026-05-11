@@ -22,6 +22,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_mesh_quality_acceptance.md` for the decision accepting the remaining high aspect-ratio `checkMesh` failure as a documented exception. This allows solver setup planning, but does not imply CFD validation and does not allow solver runs, force extraction, or aerodynamic claims before a separate Spalart-Allmaras baseline setup/review gate.
 - See `docs/tmr_naca0012_sa_baseline_setup_plan.md` for the documentation-only Spalart-Allmaras `simpleFoam` baseline setup plan. It allows a later implementation task to create solver dictionaries, but it does not authorize solver execution, force extraction, or validation claims.
 - See `docs/tmr_naca0012_sa_baseline_case_setup_check.md` for the copied-case SA baseline dictionary writer gate. It wrote initial/setup files and ran `checkMesh` plus dictionary reads only; no solver run, force extraction, or validation was performed.
+- See `docs/tmr_naca0012_sa_dry_run_check.md` for the controlled `simpleFoam -dry-run` parse/setup gate. It completed cleanly, but pressure-solver behavior requires review before any real solver run.
 
 ## Geometry/STL Inspection Before Meshing
 

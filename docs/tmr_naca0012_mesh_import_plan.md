@@ -49,6 +49,7 @@ Accepting this mesh-quality exception does not imply CFD validation. Solver setu
 The Spalart-Allmaras baseline setup plan is recorded in `docs/tmr_naca0012_sa_baseline_setup_plan.md`. It plans a later OpenFOAM `simpleFoam` implementation for the accepted mesh, but it does not create solver dictionaries, run the solver, extract forces, or make CFD validation claims.
 
 The copied-case Spalart-Allmaras baseline setup check is recorded in `docs/tmr_naca0012_sa_baseline_case_setup_check.md`. It wrote initial/setup dictionaries into a copied external case and ran only `checkMesh` plus `foamDictionary` reads. It did not run `simpleFoam`, extract forces, or validate CFD results.
+The controlled dry-run check is recorded in `docs/tmr_naca0012_sa_dry_run_check.md`. `simpleFoam -dry-run` completed, confirming parse/setup compatibility for one dry-run step, but pressure-solver behavior requires review before a real solver run.
 
 The first manual feasibility sequence should be:
 
