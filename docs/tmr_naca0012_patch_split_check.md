@@ -114,10 +114,14 @@ The failed high-aspect-ratio check was also present before patch splitting, so t
 - ParaView inspection remains required.
 - The high-aspect-ratio check remains unresolved and requires review in the context of the NASA/TMR grid and OpenFOAM expectations.
 
+## Visual Inspection
+
+The patched mesh was visually inspected in ParaView after this split. The patch-specific visual gate passed: the C-grid topology, wake block, near-airfoil clustering, farfield outline, airfoil wall surface, and full front/back span planes were visible, and no obvious visual corruption from patch splitting was observed.
+
+See `docs/tmr_naca0012_patched_mesh_visual_inspection.md` for the inspection record. This visual gate does not imply solver readiness or CFD validation.
+
 ## Next Gate
 
-- Inspect the patched mesh in ParaView.
-- Confirm that `front`, `back`, `airfoil`, and `farfield` patches match the intended physical regions.
 - Decide whether and how to change `front` and `back` from `patch` to `empty` for a strict 2D OpenFOAM workflow.
 - Re-run `checkMesh` after any patch-type changes.
 - Review whether the high-aspect-ratio check is acceptable for this imported boundary-layer grid before any solver setup.

@@ -16,6 +16,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_cgns_import_check.md` for the first CGNS import availability check. The configured Docker OpenFOAM image did not include a CGNS import utility, so CGNS conversion was not attempted.
 - See `docs/tmr_naca0012_patch_mapping_analysis.md` for the documentation-only neutral-map analysis of how the imported PLOT3D `defaultFaces` patch might be split in a future implementation.
 - See `docs/tmr_naca0012_patch_split_check.md` for the first copied-case patch split result. The split produced named patches, but the mesh still failed one high-aspect-ratio check and is not solver-ready.
+- See `docs/tmr_naca0012_patched_mesh_visual_inspection.md` for the ParaView inspection confirming the patched mesh passes the patch-specific visual gate. This does not imply solver readiness or CFD validation.
 
 ## Geometry/STL Inspection Before Meshing
 
@@ -58,6 +59,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_cgns_import_check.md` before pursuing a CGNS import path with a different Docker image or external converter.
 - See `docs/tmr_naca0012_patch_mapping_analysis.md` before implementing or running any patch splitter for the imported NASA/TMR PLOT3D mesh.
 - See `docs/tmr_naca0012_patch_split_check.md` before changing patch types or creating any solver setup from the patched imported mesh.
+- See `docs/tmr_naca0012_patched_mesh_visual_inspection.md` before the next gate: deciding whether to convert `front` and `back` to `empty` on a copied external case and rerunning `checkMesh`.
 
 ## Manual Checks
 

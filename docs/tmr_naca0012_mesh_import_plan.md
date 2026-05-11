@@ -36,6 +36,8 @@ The neutral-map patch mapping analysis is recorded in `docs/tmr_naca0012_patch_m
 
 The first copied-case patch-splitting prototype result is recorded in `docs/tmr_naca0012_patch_split_check.md`. It produced `front`, `back`, `airfoil`, and `farfield` patches with expected counts, but the mesh still failed one high-aspect-ratio `checkMesh` check and is not solver-ready.
 
+The patched mesh ParaView inspection is recorded in `docs/tmr_naca0012_patched_mesh_visual_inspection.md`. It passed the patch-specific visual gate, but `front`/`back` patch types and the high aspect-ratio finding remain unresolved.
+
 The first manual feasibility sequence should be:
 
 1. Download the candidate grid outside the repository under `~/Projects/airfoil-digital-twin-references/naca0012/`.
