@@ -261,38 +261,39 @@ def _fv_solution() -> str:
     p
     {
         solver          GAMG;
-        tolerance       1e-8;
-        relTol          0.01;
+        tolerance       1e-06;
+        relTol          0.1;
         smoother        GaussSeidel;
     }
 
     U
     {
         solver          smoothSolver;
-        smoother        symGaussSeidel;
-        tolerance       1e-9;
+        smoother        GaussSeidel;
+        nSweeps         2;
+        tolerance       1e-08;
         relTol          0.1;
     }
 
     nuTilda
     {
         solver          smoothSolver;
-        smoother        symGaussSeidel;
-        tolerance       1e-9;
+        smoother        GaussSeidel;
+        nSweeps         2;
+        tolerance       1e-08;
         relTol          0.1;
     }
 }
 
 SIMPLE
 {
-    nNonOrthogonalCorrectors 1;
-    consistent      yes;
+    nNonOrthogonalCorrectors 0;
 
     residualControl
     {
         p           1e-5;
-        U           1e-6;
-        nuTilda     1e-6;
+        U           1e-5;
+        nuTilda     1e-5;
     }
 }
 

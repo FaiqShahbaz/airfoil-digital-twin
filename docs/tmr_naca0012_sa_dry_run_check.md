@@ -42,6 +42,8 @@ The pressure solve line with 1000 iterations and unchanged residual 0.9793601 mu
 
 The follow-up solver-control review is recorded in `docs/tmr_naca0012_solver_control_review.md`. It did not identify a parse/setup dictionary defect, but it keeps the pressure behavior as a blocker before any real solver run.
 
+A later `fvSolution` revision aligned the generated controls with the OpenFOAM-maintained `simpleFoam/airFoil2D` tutorial. See `docs/tmr_naca0012_pressure_control_fix.md` for the follow-up dry-run, where this unreduced pressure solve did not recur. That later dry-run is still not CFD validation and still does not authorize a full solver run.
+
 ## Force Output Policy
 
 forceCoeffs remains intentionally omitted from system/controlDict.

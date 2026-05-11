@@ -24,6 +24,8 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_sa_baseline_case_setup_check.md` for the copied-case SA baseline dictionary writer gate. It wrote initial/setup files and ran `checkMesh` plus dictionary reads only; no solver run, force extraction, or validation was performed.
 - See `docs/tmr_naca0012_sa_dry_run_check.md` for the controlled `simpleFoam -dry-run` parse/setup gate. It completed cleanly, but pressure-solver behavior requires review before any real solver run.
 - See `docs/tmr_naca0012_solver_control_review.md` for the post-dry-run solver-control review. No dictionary defect was identified, but the unreduced dry-run pressure residual remains a blocker before any real solver run.
+- See `docs/tmr_naca0012_reference_case_comparison.md` for the OpenFOAM reference-case comparison. No matching tutorial was found inside the Docker image, but the user-provided OpenFOAM-maintained `simpleFoam/airFoil2D` reference was used to choose a minimal solver-control alignment.
+- See `docs/tmr_naca0012_pressure_control_fix.md` for the minimal `fvSolution` revision aligned with the OpenFOAM-maintained `simpleFoam/airFoil2D` tutorial. The follow-up dry-run improved the pressure setup behavior, but still does not authorize a full solver run or CFD claims.
 
 ## Geometry/STL Inspection Before Meshing
 

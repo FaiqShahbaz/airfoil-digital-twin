@@ -124,6 +124,10 @@ No dictionary defect was identified in this review:
 
 The current controls should be treated as conservative placeholder controls that passed parsing/setup but are not accepted for a real CFD solve.
 
+The follow-up reference-case comparison is recorded in `docs/tmr_naca0012_reference_case_comparison.md`. The local Docker image had no matching tutorial, but the user-provided OpenFOAM-maintained `simpleFoam/airFoil2D` reference provided a directly relevant airfoil SA solver-control pattern.
+
+The minimal pressure-control fix is recorded in `docs/tmr_naca0012_pressure_control_fix.md`. It aligned the generated `fvSolution` with the `airFoil2D` pattern and the follow-up dry-run no longer showed the unreduced second pressure solve.
+
 ## External Case Regeneration
 
 The external copied case was not regenerated.
@@ -142,9 +146,8 @@ No tests were run because this review made documentation-only changes and no sou
 
 ## Remaining Blockers Before Real Solver Run
 
-- Review and choose pressure solver controls for the first real run; do not use the current pressure behavior as accepted convergence evidence.
-- Decide whether to revise `p` solver controls, add explicit pressure-reference controls if needed, or test an alternate pressure-solver setup in a separate parse/dry-run gate.
-- Review whether `consistent yes` is appropriate for the first real SA run on this imported C-grid.
+- Treat the `airFoil2D`-aligned dry-run as setup evidence only; do not use it as accepted convergence evidence.
+- Review whether additional pressure-reference controls are needed before a real run.
 - Confirm `nutLowReWallFunction` is acceptable for the wall-resolved SA baseline or replace it with a reviewed OpenFOAM-compatible wall treatment.
 - Confirm AoA sign convention and force/moment reference definitions before enabling any force monitoring.
 - Keep `forceCoeffs` disabled until a separate force-monitoring gate.

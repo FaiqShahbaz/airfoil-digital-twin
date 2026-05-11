@@ -136,6 +136,24 @@ def test_system_files_include_sa_schemes_without_force_coefficients(tmp_path: Pa
     assert "residualControl" in fv_solution
 
 
+def test_fv_solution_matches_airfoil2d_solver_control_pattern(tmp_path: Path) -> None:
+    _make_case(tmp_path)
+    write_tmr_sa_baseline_files(tmp_path)
+
+    fv_solution = _read(tmp_path, "system/fvSolution")
+
+    assert "solver          GAMG;" in fv_solution
+    assert "tolerance       1e-06;" in fv_solution
+    assert "relTol          0.1;" in fv_solution
+    assert fv_solution.count("smoother        GaussSeidel;") == 3
+    assert fv_solution.count("nSweeps         2;") == 2
+    assert fv_solution.count("tolerance       1e-08;") == 2
+    assert "nNonOrthogonalCorrectors 0;" in fv_solution
+    assert "consistent" not in fv_solution
+    assert "U           1e-5;" in fv_solution
+    assert "nuTilda     1e-5;" in fv_solution
+
+
 def test_writer_rejects_unaccepted_boundary_patch_types(tmp_path: Path) -> None:
     _make_case(tmp_path)
     boundary_file = tmp_path / "constant" / "polyMesh" / "boundary"
