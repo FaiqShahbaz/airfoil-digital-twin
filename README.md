@@ -4,7 +4,11 @@ A local-first airfoil CFD surrogate / digital twin project using Docker-based Op
 
 ## Scope
 
-This repository is currently at Gate 2 scaffolding: minimal NACA 4-digit geometry generation, ASCII STL airfoil export, Docker OpenFOAM checks, and a single placeholder validation-case writer. It does not yet implement SDF generation, validated meshing, CFD execution, preprocessing, ML training, evaluation, or dashboard functionality.
+This repository is currently in CFD validation-path setup. The historical Gmsh workflow is retained only as an early geometry/plumbing prototype record; no generated Gmsh mesh is accepted as the validation mesh or as a source of CFD claims.
+
+The active CFD validation path uses NASA/TMR NACA0012 Family II grids: external grid import, patch recovery, empty-span 2D setup, documented mesh-quality exception handling, and a source-generated Spalart-Allmaras baseline setup. No CFD validation, dataset generation, ML training, evaluation, or dashboard functionality has been completed.
+
+See `docs/current_cfd_status.md` for the current status and gate order.
 
 ## OpenFOAM
 
@@ -18,7 +22,7 @@ python scripts/check_openfoam_docker.py
 
 This check verifies `blockMesh`, `checkMesh`, and `simpleFoam` through `openfoam2412 -c`; it does not create cases or run CFD.
 
-Create the current scaffold-only NACA 0012 validation case:
+Create the historical scaffold-only NACA 0012 plumbing case:
 
 ```bash
 python scripts/create_single_case.py
@@ -26,7 +30,7 @@ python scripts/create_single_case.py
 
 Use `python scripts/create_single_case.py --closed-te` only when explicitly inspecting the closed trailing-edge variant.
 
-The generated case is intentionally incomplete and is not CFD-valid yet. See `docs/cfd_case_validation.md` before attempting validation runs.
+The generated case is intentionally incomplete and is not CFD-valid. It is historical plumbing only and is not the active validation mesh path. See `docs/cfd_case_validation.md` before any CFD validation work.
 
 Inspect generated NACA 0012 geometry/STL artifacts before meshing:
 
@@ -40,7 +44,7 @@ Write a small rectangular Plot3D feasibility artifact for future mesh-workflow i
 python scripts/write_plot3d_feasibility_mesh.py
 ```
 
-Write a deterministic Gmsh CLI rectangular feasibility geometry:
+Historical Gmsh prototype utilities remain available for plumbing records only:
 
 ```bash
 python scripts/write_gmsh_feasibility_geo.py
@@ -52,7 +56,7 @@ Write the first Gmsh CLI NACA 0012 airfoil prototype geometry:
 python scripts/write_gmsh_airfoil_proto_geo.py
 ```
 
-The first manual Gmsh airfoil mesh conversion and `checkMesh` record is documented in `docs/gmsh_airfoil_mesh_check.md`; it is not CFD validation.
+The first manual Gmsh airfoil mesh conversion and `checkMesh` record is documented in `docs/gmsh_airfoil_mesh_check.md`; it is not CFD validation and is not the active validation mesh.
 
 The provisional OpenFOAM patch and 2D-boundary strategy is documented in `docs/openfoam_patch_strategy.md`.
 
@@ -84,13 +88,13 @@ The first successful 5-iteration `simpleFoam` plumbing smoke test is recorded in
 
 ParaView visual inspection found the current mesh too coarse for field or force interpretation; see `docs/mesh_visual_inspection.md`.
 
-The current Gmsh/simpleFoam case is not the validation base case. The validation-base-case decision now pivots to a NASA/TMR NACA 0012 setup with Ladson NASA TM 4074 as the preferred experimental/reference anchor; see `docs/validation_base_case_decision.md`.
+The current Gmsh/simpleFoam case is not the validation base case. The validation-base-case decision has moved to a NASA/TMR NACA 0012 setup with Ladson NASA TM 4074 as the preferred experimental/reference anchor; see `docs/validation_base_case_decision.md`.
 
-The NASA/TMR mesh-import feasibility plan is documented in `docs/tmr_naca0012_mesh_import_plan.md`. Downloaded TMR grids and reference PDFs should stay outside this repository under `~/Projects/airfoil-digital-twin-references/naca0012/`.
+The NASA/TMR mesh-import and setup path is documented in `docs/tmr_naca0012_mesh_import_plan.md` and summarized in `docs/current_cfd_status.md`. Downloaded TMR grids, external OpenFOAM cases, reference PDFs, logs, solver outputs, and generated result artifacts should stay outside this repository under `~/Projects/airfoil-digital-twin-references/naca0012/`.
 
 ## Validation-First Plan
 
-The first CFD validation step should use one or two airfoils before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.
+The first CFD validation step should use the NASA/TMR NACA0012 path before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.
 
 The provisional serious target is NACA0012 at Mach `0.15`, Reynolds number `6e6`, chord `1`, fully turbulent RANS, with `Cp`, `Cl`, and `Cd` validation outputs. Dataset generation, ML tuning, and benchmark claims remain blocked until the validation case passes reference comparison gates.
 

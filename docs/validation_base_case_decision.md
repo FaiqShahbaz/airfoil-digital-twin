@@ -1,12 +1,12 @@
 # Validation Base Case Decision
 
-This document records the decision to pivot the serious CFD validation base case away from the current Gmsh/simpleFoam plumbing mesh and toward a reference-anchored NACA 0012 validation setup.
+This document records the decision to pivot the serious CFD validation base case away from the historical Gmsh/simpleFoam plumbing mesh and toward a reference-anchored NASA/TMR NACA 0012 validation setup.
 
 ## Decision
 
-The current Gmsh mesh and minimal `simpleFoam` case are not the validation base case. They remain useful only as a solver-plumbing and case-file smoke test.
+The historical Gmsh mesh and minimal `simpleFoam` case are not the validation base case. They remain useful only as solver-plumbing and case-file smoke-test records.
 
-The preferred validation base case will instead follow a well-established NACA 0012 validation workflow anchored by NASA/TMR for CFD setup and by Ladson NASA TM 4074 for experimental aerodynamic reference data.
+The active validation base case follows a well-established NACA 0012 validation workflow anchored by NASA/TMR for CFD setup and by Ladson NASA TM 4074 for experimental aerodynamic reference data.
 
 The first mesh-import feasibility plan for this pivot is documented in `docs/tmr_naca0012_mesh_import_plan.md`.
 
@@ -17,7 +17,7 @@ The first mesh-import feasibility plan for this pivot is documented in `docs/tmr
 - No boundary-layer refinement or prism-layer structure exists.
 - The rectangular farfield and top/bottom treatment are provisional.
 - The laminar `Re=1e6` setup is a smoke-test simplification, not a physical validation setup.
-- The current case proved only mesh/case/solver plumbing.
+- The historical Gmsh case proved only mesh/case/solver plumbing.
 - The current case is not suitable for field interpretation, force coefficients, CFD validation, or dataset generation.
 
 ## Preferred Validation Anchors
@@ -41,7 +41,8 @@ These are provisional until the NASA/TMR case setup and Ladson data are manually
 - A boundary-layer-resolved mesh is required.
 - A C-grid, O-grid, or NASA-like structured mesh strategy is preferred.
 - Farfield/domain size should follow reference guidance, not the current small rectangle.
-- The current Gmsh prototype is insufficient for the validation base case.
+- The current Gmsh prototype is insufficient for the validation base case and is retained only as an early plumbing/geometry prototype record.
+- No generated Gmsh mesh is accepted as the validation mesh.
 - Any local mesh workflow must document geometry, farfield, wall spacing/y+ intent, growth, wake resolution, and mesh-independence expectations before validation claims.
 
 ## Next Research Gate
@@ -53,7 +54,7 @@ These are provisional until the NASA/TMR case setup and Ladson data are manually
 - If direct conversion is not feasible, design a local NASA-like C-grid or O-grid workflow.
 - Document protocol checks before any force, pressure, or benchmark comparison.
 
-The first direct-import candidate is the NASA/TMR 3D structured PLOT3D `449x129` grid, `n0012_449-129.p3dfmt.gz`, stored outside the repository and tested with Docker OpenFOAM `plot3dToFoam`.
+The first direct-import candidate is the NASA/TMR Family II 3D structured PLOT3D `449x129` grid, stored outside the repository and tested with Docker OpenFOAM `plot3dToFoam`.
 
 ## Stopping Rules
 

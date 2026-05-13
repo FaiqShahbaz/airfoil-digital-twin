@@ -1,14 +1,16 @@
 # CFD Case Validation Checklist
 
-The current Gate 2 NACA 0012 case is a scaffold only. It is not CFD-valid yet, and the generated OpenFOAM dictionaries must not be treated as a reviewed mesh, solver setup, or validated simulation.
+The historical Gmsh NACA0012 case is a scaffold/plumbing record only. It is not CFD-valid, is not the active validation mesh, and must not be treated as a reviewed mesh, solver setup, or validated simulation.
+
+The active CFD validation path uses NASA/TMR NACA0012 grids. No generated Gmsh mesh is accepted as the validation mesh, and no Gmsh smoke-test result is a source of CFD claims.
 
 Before scaling to more cases, validate one or two local OpenFOAM cases with the configured Docker image.
 
 ## Validation Base Case Decision
 
-- The current Gmsh mesh and minimal `simpleFoam` case are not the validation base case.
-- The current case remains a solver-plumbing smoke test only.
-- The serious validation base case should pivot to a NASA/TMR NACA 0012 validation setup with Ladson NASA TM 4074 as the preferred experimental/reference anchor.
+- The historical Gmsh mesh and minimal `simpleFoam` case are not the validation base case.
+- The Gmsh workflow is retained only as an early plumbing/geometry prototype record.
+- The active validation mesh path uses a NASA/TMR NACA 0012 validation setup with Ladson NASA TM 4074 as the preferred experimental/reference anchor.
 - Provisional target conditions are NACA0012, Mach `0.15`, Reynolds number `6e6`, chord `1`, fully turbulent RANS, with `Cp`, `Cl`, and `Cd` as validation outputs.
 - See `docs/validation_base_case_decision.md` for the decision record, mesh implications, research gate, stopping rules, and citation placeholders.
 - See `docs/tmr_naca0012_mesh_import_plan.md` for the documentation-only plan to test importing the NASA/TMR 3D structured PLOT3D `449x129` grid with Docker OpenFOAM `plot3dToFoam`.
@@ -26,6 +28,21 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_solver_control_review.md` for the post-dry-run solver-control review. No dictionary defect was identified, but the unreduced dry-run pressure residual remains a blocker before any real solver run.
 - See `docs/tmr_naca0012_reference_case_comparison.md` for the OpenFOAM reference-case comparison. No matching tutorial was found inside the Docker image, but the user-provided OpenFOAM-maintained `simpleFoam/airFoil2D` reference was used to choose a minimal solver-control alignment.
 - See `docs/tmr_naca0012_pressure_control_fix.md` for the minimal `fvSolution` revision aligned with the OpenFOAM-maintained `simpleFoam/airFoil2D` tutorial. The follow-up dry-run improved the pressure setup behavior, but still does not authorize a full solver run or CFD claims.
+- Manual multi-model OpenFOAM cases may intentionally include multiple turbulence-model fields/settings for later switching. They are exploratory experiment cases and must remain separate from the source-generated Spalart-Allmaras baseline case.
+
+## Active Gate Order
+
+1. Historical Gmsh geometry/plumbing smoke tests only; not the validation mesh and not a source of CFD claims.
+2. NASA/TMR NACA0012 Family II grid import from external references.
+3. Patch split/recovery from imported `defaultFaces` into `front`, `back`, `airfoil`, and `farfield`.
+4. Empty-span 2D setup with `front` and `back` changed to `empty` on a copied external case.
+5. Mesh-quality review and documented high-aspect-ratio exception for the NASA/TMR wall-resolved C-grid.
+6. Source-generated Spalart-Allmaras baseline dictionary setup on the accepted external mesh copy.
+7. Controlled `simpleFoam -dry-run` parse/setup gate only.
+8. OpenFOAM `simpleFoam/airFoil2D` solver-control alignment and follow-up dry-run behavior check.
+9. Manual/multi-model experiment cases remain exploratory only and must not be confused with the source-generated SA baseline.
+
+Full solver runs, force extraction, aerodynamic interpretation, CFD validation, dataset generation, ML training claims, and dashboard claims remain blocked until later explicit gates.
 
 ## Geometry/STL Inspection Before Meshing
 
@@ -48,6 +65,8 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 
 ## Gmsh CLI Conversion Feasibility
 
+Historical prototype only - not the active validation path.
+
 - See `docs/gmsh_conversion_feasibility.md` for the manual rectangular 3D Gmsh-to-OpenFOAM conversion record.
 - Generate the deterministic Gmsh `.geo` feasibility artifact with `python scripts/write_gmsh_feasibility_geo.py`.
 - The generated `.geo` is a thin rectangular volume only, not an airfoil mesh and not CFD validation.
@@ -62,7 +81,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - The first `simpleFoam` smoke test reached `Time = 1` but stopped on a missing viscous divergence scheme; this was a plumbing issue, not validation.
 - See `docs/openfoam_simplefoam_smoke_test.md` for the first successful 5-iteration `simpleFoam` plumbing smoke test; it is not convergence or CFD validation.
 - See `docs/mesh_visual_inspection.md` for the ParaView mesh inspection that stops field/force interpretation on the current coarse mesh.
-- See `docs/validation_base_case_decision.md` for the decision to pivot the validation base case to NASA/TMR plus Ladson NACA 0012 references.
+- See `docs/validation_base_case_decision.md` for the decision that moved the validation base case to NASA/TMR plus Ladson NACA 0012 references.
 - See `docs/tmr_naca0012_mesh_import_plan.md` before attempting any NASA/TMR grid download, conversion, patch mapping, `checkMesh`, or ParaView inspection.
 - See `docs/tmr_naca0012_import_check.md` before any solver setup from the imported NASA/TMR Family II grid.
 - See `docs/tmr_naca0012_cgns_import_check.md` before pursuing a CGNS import path with a different Docker image or external converter.
@@ -89,4 +108,4 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 
 ## Current Limitation
 
-The configured Docker image is available and required commands are present, but this repository currently writes placeholder case files only. The scaffold intentionally does not create a complete mesh, does not run `blockMesh`, does not run `checkMesh`, and does not run `simpleFoam`.
+The configured Docker image is available and required commands are present. The source-generated TMR SA baseline dictionaries have passed setup/read and dry-run gates only. No full `simpleFoam` run, force extraction, CFD validation, or dataset generation has been authorized.

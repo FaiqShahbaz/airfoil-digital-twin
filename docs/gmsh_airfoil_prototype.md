@@ -1,6 +1,8 @@
 # Gmsh Airfoil Prototype
 
-This is the first Gmsh airfoil geometry prototype for the project. It is not CFD validation and it is not a solver setup.
+Historical prototype only - not the active validation path.
+
+This is the first Gmsh airfoil geometry prototype for the project. It is not CFD validation, it is not a solver setup, and it is not the source of the active validation mesh.
 
 ## Prototype Scope
 

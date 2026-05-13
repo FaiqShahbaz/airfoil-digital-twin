@@ -1,6 +1,8 @@
 # TMR NACA0012 Mesh Import Plan
 
-This is a documentation-only feasibility plan for importing a NASA/TMR NACA0012 structured grid into OpenFOAM. No grids, PDFs, downloaded data, generated meshes, or conversion artifacts are stored in this repository.
+This is the active CFD validation mesh path for importing a NASA/TMR NACA0012 structured grid into OpenFOAM. No grids, PDFs, downloaded data, generated meshes, external cases, logs, or conversion artifacts are stored in this repository.
+
+The historical Gmsh workflow is retained only as an early geometry/plumbing prototype record. No generated Gmsh mesh is accepted as the validation mesh or as a source of CFD claims.
 
 ## Source Facts To Preserve
 
@@ -50,6 +52,10 @@ The Spalart-Allmaras baseline setup plan is recorded in `docs/tmr_naca0012_sa_ba
 
 The copied-case Spalart-Allmaras baseline setup check is recorded in `docs/tmr_naca0012_sa_baseline_case_setup_check.md`. It wrote initial/setup dictionaries into a copied external case and ran only `checkMesh` plus `foamDictionary` reads. It did not run `simpleFoam`, extract forces, or validate CFD results.
 The controlled dry-run check is recorded in `docs/tmr_naca0012_sa_dry_run_check.md`. `simpleFoam -dry-run` completed, confirming parse/setup compatibility for one dry-run step, but pressure-solver behavior requires review before a real solver run.
+
+The airFoil2D solver-control alignment is recorded in `docs/tmr_naca0012_pressure_control_fix.md`. The follow-up dry-run improved pressure setup behavior, but it still does not authorize a full solver run, force extraction, or CFD validation claims.
+
+Manual multi-model OpenFOAM cases may intentionally include additional turbulence-model fields and settings for later switching. Treat those as exploratory experiment cases. They must remain separate from the source-generated Spalart-Allmaras baseline case and must not be used as evidence that the SA baseline writer has changed.
 
 The first manual feasibility sequence should be:
 

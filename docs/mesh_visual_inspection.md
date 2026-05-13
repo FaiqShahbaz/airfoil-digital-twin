@@ -1,5 +1,7 @@
 # Mesh Visual Inspection
 
+Historical prototype only - not the active validation path.
+
 This document records the ParaView visual mesh inspection after the first 5-iteration `simpleFoam` plumbing smoke test. The smoke test remains useful only because it proved the case can run through basic solver plumbing. It does not justify field interpretation, force interpretation, validation, or dataset generation.
 
 ## Inspection Context
@@ -22,11 +24,11 @@ This document records the ParaView visual mesh inspection after the first 5-iter
 
 Field inspection from the 5-iteration smoke run is deferred because mesh quality is not adequate. Further interpretation of flow values, residual behavior beyond plumbing, or forces on this mesh should stop.
 
-The current Gmsh mesh and `simpleFoam` case are not the validation base case. The next validation-base-case direction is a NASA/TMR plus Ladson NACA 0012 reference setup, recorded in `docs/validation_base_case_decision.md`.
+The current Gmsh mesh and `simpleFoam` case are not the validation base case. The active validation path has moved to a NASA/TMR plus Ladson NACA 0012 reference setup, recorded in `docs/validation_base_case_decision.md`.
 
-The next priority is reference-guided mesh and setup research, not force extraction or field analysis on this mesh.
+The active priority is the NASA/TMR mesh workflow and setup gates, not force extraction or field analysis on this historical Gmsh mesh.
 
-## Next Mesh-Improvement Gate
+## Historical Next Mesh-Improvement Gate
 
 - Locate the NASA/TMR NACA 0012 case page and data.
 - Locate the Ladson NASA TM 4074 data/source.

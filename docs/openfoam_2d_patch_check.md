@@ -1,6 +1,10 @@
 # OpenFOAM 2D Patch Check
 
-This document records the successful manual patch-type update and `checkMesh` gate for the first strict 2D NACA 0012 Gmsh airfoil mesh path. This is not CFD validation, and no solver run has been performed.
+Historical prototype only - not the active validation path.
+
+This document records the successful manual patch-type update and `checkMesh` gate for the first strict 2D NACA 0012 Gmsh airfoil mesh plumbing path. This is not CFD validation, and no solver run has been performed.
+
+The active CFD validation path uses NASA/TMR NACA0012 grids. No generated Gmsh mesh is accepted as the validation mesh.
 
 ## Manual Command Chain
 
@@ -68,10 +72,10 @@ Patch updates applied:
 - No solver, convergence, or reference comparison gate has passed.
 - This case is not ready for dataset generation.
 
-## Next Validation Gate
+## Historical Next Gate
 
 - Design minimal `0/U` and `0/p` boundary-condition files.
 - Keep the first solver setup laminar/simple if possible, or document turbulence deferral explicitly.
 - Run `checkMesh` again after any case-file changes.
 - Do not run `simpleFoam` until field files and solver dictionaries are reviewed.
-- Keep this as a single-case validation path; do not scale to dataset generation.
+- Keep this as a single-case plumbing path; do not scale to dataset generation.

@@ -1,6 +1,10 @@
 # OpenFOAM Laminar Case Plan
 
-This document plans the first minimal laminar OpenFOAM case files for the NACA 0012 strict-2D Gmsh airfoil validation path. It is documentation only. No OpenFOAM case files are created here, no solver run has been performed, and no CFD validity is claimed.
+Historical prototype only - not the active validation path.
+
+This document plans the first minimal laminar OpenFOAM case files for the NACA 0012 strict-2D Gmsh airfoil plumbing path. It is documentation only. No OpenFOAM case files are created here, no solver run has been performed, and no CFD validity is claimed.
+
+The Gmsh workflow is retained only as an early plumbing/geometry prototype record. The active CFD validation path uses NASA/TMR NACA0012 grids.
 
 ## Intended First Case
 
@@ -58,7 +62,7 @@ For the first writer implementation, `top` and `bottom` use freestream-like fixe
 
 The first solver setup should remain laminar/simple if possible to reduce moving parts. If a turbulence model becomes necessary even for the smoke test, document that deferral decision before adding turbulence fields or model dictionaries.
 
-## Validation Sequence
+## Historical Smoke-Test Sequence
 
 1. Generate the Gmsh airfoil geometry.
 2. Generate the mesh manually with Gmsh.
@@ -101,7 +105,7 @@ ParaView visual inspection then showed the current mesh is too coarse and lacks 
 - If the solver diverges, stop and diagnose.
 - Do not collect data.
 - Do not compute or report force coefficients as validation.
-- Do not scale beyond this single-case validation path.
+- Do not scale beyond this single-case plumbing path.
 
 ## Out Of Scope
 

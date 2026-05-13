@@ -1,6 +1,10 @@
 # OpenFOAM Laminar Parse Check
 
+Historical prototype only - not the active validation path.
+
 This document records the successful manual OpenFOAM parsing/check gate for the generated minimal laminar NACA 0012 smoke-test case files. This is not CFD validation, and no solver run has been performed.
+
+The Gmsh workflow is retained only as an early plumbing/geometry prototype record. The active CFD validation path uses NASA/TMR NACA0012 grids.
 
 ## Manual Command Chain
 
@@ -79,7 +83,7 @@ docker run --rm -v <local-case-dir>:/case opencfd/openfoam-run:2412 openfoam2412
 - Top/bottom farfield treatment remains provisional.
 - Laminar `Re=1e6` remains a smoke-test simplification, not a physical validation assumption.
 
-## Next Validation Gate
+## Historical Next Gate
 
 - Review `fvSchemes` and `fvSolution` before any solver execution.
 - Run an extremely short `simpleFoam` smoke test only after that review.

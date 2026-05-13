@@ -1,6 +1,8 @@
 # Gmsh Airfoil Mesh Check
 
-This document records a successful manual mesh-conversion and `checkMesh` gate for the sanitized NACA 0012 Gmsh airfoil prototype. This is not CFD validation, and no solver run has been performed.
+Historical prototype only - not the active validation path.
+
+This document records a successful manual mesh-conversion and `checkMesh` gate for the sanitized NACA 0012 Gmsh airfoil prototype. This is not CFD validation, no solver run has been performed, and no generated Gmsh mesh is accepted as the validation mesh.
 
 ## Manual Command Chain
 
@@ -53,7 +55,7 @@ The generated `.msh` from the earlier failed unsanitized attempt should not be u
 - Near-wall quality and y+ are not assessed.
 - Patch semantics are provisional and require boundary-condition review.
 
-## Next Validation Gate
+## Historical Next Gate
 
 - Review the converted mesh and patch layout visually.
 - Decide and document `front`/`back` treatment for a 2D workflow; see `docs/openfoam_patch_strategy.md`.

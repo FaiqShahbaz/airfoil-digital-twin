@@ -1,6 +1,8 @@
 # OpenFOAM simpleFoam Smoke Test
 
-This document records the first successful 5-iteration `simpleFoam` plumbing smoke test for the minimal laminar NACA 0012 strict-2D Gmsh airfoil case. This is not CFD validation.
+Historical prototype only - not the active validation path.
+
+This document records the first successful 5-iteration `simpleFoam` plumbing smoke test for the minimal laminar NACA 0012 strict-2D Gmsh airfoil case. This is not CFD validation, not convergence evidence, and not the source of the active validation mesh.
 
 ## Manual Command Chain Summary
 
@@ -49,7 +51,7 @@ time step continuity errors: sum local = 0.00047749181, global = -9.7075633e-05,
 - Top/bottom farfield treatment remains provisional.
 - Laminar `Re=1e6` remains a smoke-test simplification.
 
-## Next Validation Gate
+## Historical Next Gate
 
 The mesh was visually inspected in ParaView after this smoke test. That inspection found the mesh too coarse for field interpretation, force coefficients, validation, or dataset generation. See `docs/mesh_visual_inspection.md`.
 

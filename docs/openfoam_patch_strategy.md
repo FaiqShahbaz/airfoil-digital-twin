@@ -1,6 +1,10 @@
 # OpenFOAM Patch Strategy
 
+Historical prototype only - not the active validation path.
+
 This document records the provisional patch and 2D-boundary strategy for the first NACA 0012 Gmsh airfoil mesh. It is documentation only. No solver run has been performed, no boundary conditions are validated, and this is not CFD validation.
+
+The Gmsh workflow is retained only as an early plumbing/geometry prototype record. The active CFD validation path uses NASA/TMR NACA0012 grids.
 
 ## Patch Table
 
