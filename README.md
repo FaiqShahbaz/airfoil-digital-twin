@@ -6,7 +6,7 @@ A local-first airfoil CFD surrogate / digital twin project using Docker-based Op
 
 This repository is currently in CFD validation-path setup. The historical Gmsh workflow is retained only as an early geometry/plumbing prototype record; no generated Gmsh mesh is accepted as the validation mesh or as a source of CFD claims.
 
-The active CFD validation path uses NASA/TMR NACA0012 Family II grids: external grid import, patch recovery, empty-span 2D setup, documented mesh-quality exception handling, and a source-generated Spalart-Allmaras baseline setup. No CFD validation, dataset generation, ML training, evaluation, or dashboard functionality has been completed.
+The active CFD validation path uses NASA/TMR NACA0012 Family II grids: external grid import, patch recovery, empty-span 2D setup, documented mesh-quality exception handling, a source-generated Spalart-Allmaras baseline setup, and a new manually organized multi-model experiment workflow. No CFD validation, dataset generation, ML training, evaluation, or dashboard functionality has been completed.
 
 See `docs/current_cfd_status.md` for the current status and gate order.
 
@@ -90,7 +90,26 @@ ParaView visual inspection found the current mesh too coarse for field or force 
 
 The current Gmsh/simpleFoam case is not the validation base case. The validation-base-case decision has moved to a NASA/TMR NACA 0012 setup with Ladson NASA TM 4074 as the preferred experimental/reference anchor; see `docs/validation_base_case_decision.md`.
 
-The NASA/TMR mesh-import and setup path is documented in `docs/tmr_naca0012_mesh_import_plan.md` and summarized in `docs/current_cfd_status.md`. Downloaded TMR grids, external OpenFOAM cases, reference PDFs, logs, solver outputs, and generated result artifacts should stay outside this repository under `~/Projects/airfoil-digital-twin-references/naca0012/`.
+The NASA/TMR mesh-import and setup path is documented in `docs/tmr_naca0012_mesh_import_plan.md` and summarized in `docs/current_cfd_status.md`. The organized manual multi-model workflow is documented in `docs/naca0012_multimodel_case_workflow.md`.
+
+## Organized NACA0012 Layout
+
+The current intended local project layout for the manual NASA/TMR NACA0012 workflow is:
+
+```text
+naca0012/
+├── familyII_449x129/
+│   ├── makemodelfolders.sh
+│   ├── naca0012_base/
+│   ├── postprocess-script.py
+│   └── runsimulations.sh
+├── grids/
+└── papers/
+```
+
+The active manual base case is `naca0012/familyII_449x129/naca0012_base`. The helper scripts `makemodelfolders.sh`, `runsimulations.sh`, and `postprocess-script.py` are project-owned automation candidates only if they live inside this repository and are reviewed as lightweight scripts, not generated solver artifacts.
+
+Downloaded grids and papers under `naca0012/grids/` and `naca0012/papers/`, generated model runs, `processor*` folders, logs, time directories, `postProcessing`, plots, and other solver outputs must remain out of git unless explicitly reduced to lightweight metadata or documentation.
 
 ## Validation-First Plan
 

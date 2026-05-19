@@ -28,7 +28,7 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 - See `docs/tmr_naca0012_solver_control_review.md` for the post-dry-run solver-control review. No dictionary defect was identified, but the unreduced dry-run pressure residual remains a blocker before any real solver run.
 - See `docs/tmr_naca0012_reference_case_comparison.md` for the OpenFOAM reference-case comparison. No matching tutorial was found inside the Docker image, but the user-provided OpenFOAM-maintained `simpleFoam/airFoil2D` reference was used to choose a minimal solver-control alignment.
 - See `docs/tmr_naca0012_pressure_control_fix.md` for the minimal `fvSolution` revision aligned with the OpenFOAM-maintained `simpleFoam/airFoil2D` tutorial. The follow-up dry-run improved the pressure setup behavior, but still does not authorize a full solver run or CFD claims.
-- Manual multi-model OpenFOAM cases may intentionally include multiple turbulence-model fields/settings for later switching. They are exploratory experiment cases and must remain separate from the source-generated Spalart-Allmaras baseline case.
+- See `docs/naca0012_multimodel_case_workflow.md` for the organized manual multi-model workflow under `naca0012/familyII_449x129/naca0012_base`. Manual multi-model OpenFOAM cases may intentionally include multiple turbulence-model fields/settings for later switching. They are exploratory experiment cases and must remain separate from the source-generated Spalart-Allmaras baseline case.
 
 ## Active Gate Order
 
@@ -43,6 +43,21 @@ Before scaling to more cases, validate one or two local OpenFOAM cases with the 
 9. Manual/multi-model experiment cases remain exploratory only and must not be confused with the source-generated SA baseline.
 
 Full solver runs, force extraction, aerodynamic interpretation, CFD validation, dataset generation, ML training claims, and dashboard claims remain blocked until later explicit gates.
+
+## Manual Multi-Model Workflow Gate Status
+
+The organized manual NASA/TMR NACA0012 workflow is a same-grid turbulence-model sensitivity workflow first. It does not replace mesh-independence, wall-treatment, convergence, or reference-comparison gates.
+
+Current gate status:
+
+- Base case setup: active local base case intended at `naca0012/familyII_449x129/naca0012_base` for wall-resolved incompressible steady RANS at `Re_c = 6.0e6` and `AoA = 10 deg`.
+- Model-folder generation: `makemodelfolders.sh` may create per-model cases from the base case after script review; generated model folders and results are not source artifacts.
+- Single-model exploratory run first: run one selected model, normally the `SpalartAllmaras` baseline, before any all-model sweep. This requires an explicit run gate and must use Docker OpenFOAM.
+- All-model sweep later: compare `SpalartAllmaras`, `kOmegaSST`, `kOmega`, `kEpsilon`, `realizableKE`, `RNGkEpsilon`, and `LaunderSharmaKE` only after the single-model run is understood.
+- Post-processing later: `forceCoeffs`, residual histories, `Cp`, `Cf`, and plots may be used as exploratory diagnostics only after run artifacts exist and are kept out of git.
+- Validation status: no validation, convergence, benchmark agreement, dataset readiness, ML-training readiness, or dashboard readiness is established.
+
+Exploratory `forceCoeffs` output and plots can help diagnose stability and setup behavior. Final forces, pressure coefficient, and skin-friction conclusions require documented residual/force convergence, reference quantity review, force-direction review, wall-treatment review, mesh-independence planning, and NASA/TMR/Diskin/Ladson reference-comparison gates.
 
 ## Geometry/STL Inspection Before Meshing
 
