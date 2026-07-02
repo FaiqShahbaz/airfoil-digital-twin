@@ -1,0 +1,20 @@
+# NACA0012 L4 Spalart-Allmaras graph dataset configuration.
+# Paths are intentionally relative/placeholders until CFD exports are copied or mounted.
+dataset:
+  name: naca0012_l4_sa
+  source: airfoil-digital-twin-references/naca0012/studies/parametricDataset
+  graph_root: data/processed/naca0012_l4_sa/graphs
+  manifest: data/manifests/naca0012_l4_sa_manifest.csv
+  splits: data/splits/naca0012_l4_sa_splits.json
+  stats: data/processed/naca0012_l4_sa/normalization_stats.json
+
+fields:
+  inputs:
+    node_features: []
+    edge_features: [dx, dz, dist, angle]
+    global_condition: [Re_norm, AoA_norm]
+  targets: [Ux_norm, Uz_norm, p_norm, nuTilda_norm]
+
+notes:
+  - Do not use CFD output fields as model inputs.
+  - Graph nodes should initially follow finite-volume cell-centered field locations unless a later protocol explicitly changes this.

@@ -1,0 +1,359 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// NACA 0012 Validation Case — Run Control
+//
+// Solver:    simpleFoam (steady-state incompressible RANS)
+// Condition: Re=6×10⁶, Ma≈0.15, AoA=10°
+//
+// Primary reference:
+//   Diskin et al. (2015), NACA 0012, Spalart-Allmaras, Family II grids,
+//   no farfield point-vortex correction in the reported comparison.
+//   The paper solves compressible RANS at low Mach number and describes
+//   the case as essentially incompressible; this case is the practical
+//   incompressible OpenFOAM comparison at matched Re, AoA, and SA farfield.
+//
+// Main scalar target:
+//   Cl ≈ 1.091 at α = 10°. Drag and moment should be compared carefully
+//   after checking force normalization, Cp/Cf extraction, and convergence.
+//
+// Secondary experimental sanity check only:
+//   Ladson 1988, NASA TM-4074, tripped, Re≈5.95×10⁶, α≈10.12°.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ── SOLVER ───────────────────────────────────────────────────────────────
+application     simpleFoam;
+
+// ── TIME CONTROL ─────────────────────────────────────────────────────────
+// simpleFoam is steady-state: time = iteration number, deltaT = 1
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         10000;          // max SIMPLE iterations for production validation runs
+deltaT          1;
+
+// ── OUTPUT ───────────────────────────────────────────────────────────────
+writeControl    timeStep;
+writeInterval   1000;           // write flow fields every 1000 iterations
+purgeWrite      2;              // keep only the 2 most recent time directories
+                                // set 0 to keep all (large disk usage)
+
+writeFormat     binary;         // binary: ~4× faster I/O, smaller files
+writePrecision  8;
+writeCompression off;
+
+timeFormat      general;
+timePrecision   6;
+
+runTimeModifiable true;         // allows editing controlDict mid-run
+
+// ── LIBS ─────────────────────────────────────────────────────────────────
+// Load additional libraries needed by function objects below
+libs
+(
+    "libOpenFOAM.so"
+    "libforces.so"
+    "libfieldFunctionObjects.so"
+    "libsampling.so"
+    "libutilityFunctionObjects.so"
+);
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// FUNCTION OBJECTS
+// All computed every iteration (writeInterval 1) for convergence monitoring.
+// Surface fields written at writeTime (every 500 iterations).
+//
+// Output goes to postProcessing/ directory.
+// Parse with Python: pd.read_csv('postProcessing/forceCoeffs/0/forceCoeffs.dat')
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+functions
+{
+    // ── FORCE COEFFICIENTS ────────────────────────────────────────────────
+    // Cl, Cd, Cm — primary validation metric.
+    // Output: postProcessing/forceCoeffs/0/forceCoeffs.dat
+    // Columns: Time Cm Cd Cl Cm(pressure) Cd(pressure) Cl(pressure)
+    //                              Cm(viscous) Cd(viscous) Cl(viscous)
+    //
+    // IMPORTANT: liftDir and dragDir must be updated when AoA changes.
+    // For AoA θ in the x-z plane (chord along x at AoA=0):
+    //   liftDir = (-sin θ, 0,  cos θ)
+    //   dragDir = ( cos θ, 0,  sin θ)
+    //
+    // Pre-computed values:
+    //   AoA=0°:  lift=(0,0,1),              drag=(1,0,0)
+    //   AoA=4°:  lift=(-0.06976,0,0.99756), drag=(0.99756,0,0.06976)
+    //   AoA=5°:  lift=(-0.08716,0,0.99619), drag=(0.99619,0,0.08716)
+    //   AoA=10°: lift=(-0.17365,0,0.98481), drag=(0.98481,0,0.17365)
+    //   AoA=14°: lift=(-0.24192,0,0.97030), drag=(0.97030,0,0.24192)
+    //   AoA=15°: lift=(-0.25882,0,0.96593), drag=(0.96593,0,0.25882)
+    // ─────────────────────────────────────────────────────────────────────
+    forceCoeffs
+    {
+        type            forceCoeffs;
+        libs            (forces);
+
+        patches         (airfoil);     // wall patch name — must match 0/ BCs
+
+        // Incompressible: rho is not a field; specify rhoInf
+        rho             rhoInf;
+        rhoInf          1.225;         // air density [kg/m³]
+
+        // Reference values
+        magUInf         51.48;         // freestream speed [m/s]
+        lRef            1.0;           // chord length [m]
+        Aref            1.0;           // reference area (chord × unit span) [m²]
+        pRef            0;             // kinematic gauge pressure reference [m2/s2]
+
+        // Aerodynamic centre — quarter-chord point
+        CofR            (0.25 0 0);
+        pitchAxis       (0 1 0);       // spanwise axis (y-direction for 2D)
+
+        // AoA = 10 degrees (update for other angles — see table above)
+        liftDir         (-0.17365 0  0.98481);
+        dragDir         ( 0.98481 0  0.17365);
+
+        writeControl    timeStep;
+        writeInterval   1;             // every iteration — needed for convergence plot
+        log             true;          // also print Cl/Cd to terminal
+    }
+
+    // ── SOLVER RESIDUALS ─────────────────────────────────────────────────
+    // Tracks final residuals each iteration.
+    // Output: postProcessing/solverInfo/0/solverInfo.dat
+    // For the active SA baseline, U, p, and nuTilda are the relevant solved
+    // fields. k, omega, and epsilon are kept here for model-switching support;
+    // if solverInfo complains about inactive fields, reduce this list to the
+    // fields solved by the selected turbulence model.
+    residuals
+    {
+        type            solverInfo;
+        libs            (utilityFunctionObjects);
+
+        // Keep all candidate turbulence fields for the automated model sweep.
+        fields          (U p k omega epsilon nuTilda);
+
+        writeControl    timeStep;
+        writeInterval   1;
+    }
+
+    // ── y+ MONITORING ────────────────────────────────────────────────────
+    // Wall y+ — critical for turbulence model validity.
+    //
+    // Requirements (Eça et al. 2018, Comput. Fluids 170:157-175):
+    //   k-ω SST low-Re (no wall functions): max y+ ≈ 0.1 (target)
+    //   k-ω SST with wall functions:        30 < y+ < 300
+    //   SA low-Re:                          y+  < 1
+    //
+    // Diskin et al. (2015): finest grid minimum wall-normal spacing is 1e-7 c.
+    // In this OpenFOAM case, check actual y+ using this function object.
+    //
+    // Output: postProcessing/yPlus/0/yPlus.dat (min/max/avg printed to log)
+    yPlus
+    {
+        type            yPlus;
+        libs            (fieldFunctionObjects);
+
+        patches         (airfoil);
+
+        writeControl    timeStep;
+        writeInterval   100;           // check every 100 iterations
+        log             true;          // print to terminal
+    }
+
+    // ── SURFACE PRESSURE COEFFICIENT Cp ──────────────────────────────────
+    // Cp = (p - pRef) / (0.5 * U_inf²)
+    //    = p_kinematic / (0.5 * 51.48²)
+    //    = p_kinematic / 1325.095
+    //
+    // For incompressible OpenFOAM: p is kinematic pressure [m²/s²],
+    // so rho is not included in the Cp denominator.
+    //
+    // Output: postProcessing/Cp/surface/... (written at writeTime)
+    // Used for: surface-pressure comparison against the Diskin et al. reference
+    Cp
+    {
+        type            pressure;
+        libs            (fieldFunctionObjects);
+
+        // staticCoeff: computes (p - pRef) / (0.5 * |U_inf|²)
+        mode            staticCoeff;
+        pRef            0;
+        pInf            0;
+        UInf            (50.697903 0 8.939408); // AoA=10° freestream vector
+        rhoInf          1.225;
+
+        writeControl    writeTime;
+        log             false;
+    }
+
+    // ── WALL SHEAR STRESS ─────────────────────────────────────────────────
+    // Computes wall shear stress on the airfoil surface → used for Cf.
+    // For incompressible output, confirm whether wallShearStress is written
+    // as kinematic stress. If kinematic, Cf = wallShearStress/(0.5*U_inf²).
+    //
+    // Output: postProcessing/wallShearStress/... (written at writeTime)
+    // Used for: surrogate data, comparison with Diskin et al. (2015) Cf plots
+    wallShearStress
+    {
+        type            wallShearStress;
+        libs            (fieldFunctionObjects);
+
+        patches         (airfoil);
+
+        writeControl    writeTime;
+        log             false;
+    }
+
+    // ── VORTICITY FIELD ───────────────────────────────────────────────────
+    // Needed for the paper-style velocity/pressure/vorticity contour plots.
+    // Output field: vorticity [1/s], written to time directories at writeTime.
+    // Normalized plotting quantity can be computed in Python as omega_y*c/U_inf
+    // or the spanwise component appropriate to the 2D x-z plane.
+    vorticity
+    {
+        type            vorticity;
+        libs            (fieldFunctionObjects);
+
+        field           U;
+        result          vorticity;
+
+        writeControl    writeTime;
+        log             false;
+    }
+
+    // ── AIRFOIL SURFACE SAMPLING ──────────────────────────────────────────
+    // Samples model-independent fields on the airfoil surface patch.
+    // Provides raw data for post-processing:
+    //   - p for Cp reconstruction in Python: Cp = p/(0.5*U_inf^2)
+    //   - wallShearStress for skin-friction/Cf plots
+    //   - U and nut for near-wall diagnostics common to all RANS models
+    // Model-specific turbulence fields are intentionally not sampled here to
+    // avoid warnings during automated multi-model sweeps.
+    airfoilSurface
+    {
+        type            surfaces;
+        libs            (sampling);
+
+        writeControl    writeTime;
+        interpolationScheme cellPoint;  // cell-to-point interpolation
+        surfaceFormat   raw;            // x y z value — easy Python parsing
+
+        fields          (p wallShearStress U nut);
+
+        surfaces
+        {
+            airfoilPatch
+            {
+                type        patch;
+                patches     (airfoil);
+                triangulate false;      // keep quad cells — preserves surface order
+            }
+        }
+    }
+
+    // ── VOLUME FIELD SAMPLING (for surrogate training data) ───────────────
+    // Samples full flow field on a structured plane through the domain.
+    // Used for training the full-field surrogate (Phase 4+ in project plan).
+    // Only active at writeTime to avoid excessive disk usage.
+    //
+    // NOTE: sampled flow fields are post-processing outputs. These universal
+    // fields are sufficient for paper-style velocity, pressure/Cp, vorticity,
+    // and eddy-viscosity contours across the automated model sweep.
+    volumeSampling
+    {
+        type            surfaces;
+        libs            (sampling);
+
+        writeControl    writeTime;
+        interpolationScheme cell;
+        surfaceFormat   vtk;            // VTK format — open in ParaView
+
+        fields          (p U vorticity nut);
+
+        surfaces
+        {
+            midplane
+            {
+                type        cuttingPlane;
+                planeType   pointAndNormal;
+                pointAndNormalDict
+                {
+                    point   (0 -0.5 0); // mid-Y from checkMesh bounds: y=-1 to 0
+                    normal  (0 1 0);    // y is the spanwise/empty direction
+                }
+                interpolate true;
+            }
+        }
+    }
+
+    // ── FARFIELD / OUTER BOUNDARY SAMPLING ────────────────────────────────
+    // Used to examine boundary-condition effects and spurious vorticity near
+    // the outer boundary. This is especially useful when comparing against the
+    // Golmirzaee & Wood boundary-condition/domain-size paper.
+    farfieldSurface
+    {
+        type            surfaces;
+        libs            (sampling);
+
+        writeControl    writeTime;
+        interpolationScheme cellPoint;
+        surfaceFormat   raw;
+
+        fields          (p U vorticity);
+
+        surfaces
+        {
+            farfieldPatch
+            {
+                type        patch;
+                patches     (farfield);
+                triangulate false;
+            }
+        }
+    }
+
+    // ── CONVERGENCE PROBES ────────────────────────────────────────────────
+    // Monitors key flow quantities at fixed points — useful for checking
+    // whether the flow has reached steady state before residuals do.
+    // Output: postProcessing/probes/0/p and U. Model-specific turbulence fields
+    // are omitted to keep probes compatible with every RANS model in the sweep.
+    probes
+    {
+        type            probes;
+        libs            (sampling);
+
+        writeControl    timeStep;
+        writeInterval   50;
+
+        fields          (p U);
+
+        probeLocations
+        (
+            (-0.5 -0.5  0.0)    // upstream of leading edge; mid-Y plane
+            ( 0.5 -0.5  0.06)   // upper surface midchord; mid-Y plane
+            ( 0.5 -0.5 -0.06)   // lower surface midchord; mid-Y plane
+            ( 1.5 -0.5  0.0)    // near wake; mid-Y plane
+            ( 5.0 -0.5  0.0)    // far wake; mid-Y plane
+        );
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

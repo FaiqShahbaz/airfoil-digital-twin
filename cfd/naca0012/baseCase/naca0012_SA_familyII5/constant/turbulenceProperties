@@ -1,0 +1,58 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      turbulenceProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// TURBULENCE MODEL SELECTION
+//
+// Switch RASModel to change model. Corresponding 0/ fields required:
+//
+//   SpalartAllmaras  → nuTilda, nut          (SA baseline; Diskin-style case)
+//   kOmegaSST        → k, omega, nut         (primary SST comparison)
+//   kOmega           → k, omega, nut
+//   kEpsilon         → k, epsilon, nut       (high-Re wall-function family)
+//   realizableKE     → k, epsilon, nut       (high-Re wall-function family)
+//   RNGkEpsilon      → k, epsilon, nut       (high-Re wall-function family)
+//   LaunderSharmaKE  → k, epsilon, nut       (low-Re k-epsilon variant)
+//
+// NOTES FOR THE TURBULENCE-MODEL COMPARISON:
+//   - The base case remains SpalartAllmaras for consistency with the validated
+//     SA workflow and Diskin-style NACA 0012 setup.
+//   - kOmegaSST is the main SST comparison model for adverse-pressure-gradient
+//     and external-aerodynamics boundary-layer flows.
+//   - kEpsilon, realizableKE, and RNGkEpsilon are included for model sensitivity.
+//     On this low-y+ wall-resolved mesh they should be interpreted carefully;
+//     a later wall-function/high-y+ mesh study is recommended for best-practice
+//     high-Re k-epsilon validation.
+//   - LaunderSharmaKE is the low-Re k-epsilon variant and is more appropriate
+//     for the current wall-resolved mesh than standard high-Re k-epsilon models.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+simulationType  RAS;
+
+RAS
+{
+    // ── ACTIVE MODEL ─────────────────────────────────────────────────────
+    // makemodelfolders.sh overwrites this entry in each generated case.
+    RASModel        SpalartAllmaras;   // SA baseline
+    // ─────────────────────────────────────────────────────────────────────
+
+    turbulence      on;
+    printCoeffs     on;     // logs model coefficients on startup — useful to
+                            // confirm which model is active and its constants
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -1,0 +1,76 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      nut;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// TURBULENT KINEMATIC VISCOSITY  nut  [m²/s]
+//
+// Model-switching note:
+//   nut is present for most RANS models as the turbulent kinematic
+//   viscosity field. For SpalartAllmaras, nut is derived from nuTilda.
+//   For kOmegaSST/kEpsilon-family models, nut is derived from their
+//   active transported turbulence variables.
+//
+// Farfield value:
+//   nut = nutRatio * nu = 0.1 * 8.58e-6 = 8.58e-7 m²/s
+//   This is mainly for SST/k-epsilon-family model switching. For the SA
+//   Diskin et al. comparison, the key farfield value is nuTilda_inf = 3*nu.
+//
+// Wall BC — nutLowReWallFunction:
+//   Used here as a robust low-y+ model-switching default. For a pure
+//   SpalartAllmaras locked-down validation run, calculated with value
+//   uniform 0 may also be tested. For wall-function meshes, use the wall
+//   treatment required by the selected turbulence model and target y+ range.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include        "include/initialConditions"
+
+dimensions      [0 2 -1 0 0 0 0];
+
+internalField   uniform $nut_inf;
+
+boundaryField
+{
+    farfield
+    {
+        type            freestream;
+        freestreamValue uniform $nut_inf;
+        value           uniform $nut_inf;
+    }
+
+    airfoil
+    {
+        // Robust low-y+ model-switching default; verify y+ and force/Cf sensitivity
+        type            nutLowReWallFunction;
+        value           uniform 0;
+
+        // --- ALTERNATIVE: wall functions for y+ 30-300 ---
+        // type         nutkWallFunction;
+        // value        uniform 0;
+    }
+
+    front
+    {
+        type            empty;
+    }
+
+    back
+    {
+        type            empty;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

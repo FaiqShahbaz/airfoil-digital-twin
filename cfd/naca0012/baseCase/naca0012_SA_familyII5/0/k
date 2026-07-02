@@ -1,0 +1,76 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      k;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// TURBULENT KINETIC ENERGY  k  [m²/s²]
+// Used by: kOmegaSST, kOmega, kEpsilon variants
+// NOT used by: SpalartAllmaras (uses nuTilda instead)
+//
+// Model-switching note:
+//   This field is inactive for the Diskin et al. SpalartAllmaras baseline.
+//   It is kept so the same case directory can be switched to k-based RANS
+//   models without rebuilding the initial-condition set.
+//
+// Farfield value:
+//   k = 1.5 * (U_inf * I)^2 = 1.5 * (51.48 * 0.001)^2 ≈ 3.976e-3 m²/s²
+//
+// Wall BC — kLowReWallFunction:
+//   Used here as a robust low-y+ model-switching default for k-based models.
+//   For a locked-down SST/k-epsilon validation run, verify y+, force
+//   coefficients, Cp, and Cf sensitivity to the chosen wall treatment.
+//
+//   IF using wall functions (y+ 30-300): replace with kqRWallFunction.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include        "include/initialConditions"
+
+dimensions      [0 2 -2 0 0 0 0];
+
+internalField   uniform $k_inf;
+
+boundaryField
+{
+    farfield
+    {
+        type            freestream;
+        freestreamValue uniform $k_inf;
+        value           uniform $k_inf;
+    }
+
+    airfoil
+    {
+        // Robust low-y+ model-switching default; verify y+ and force/Cf sensitivity
+        type            kLowReWallFunction;
+        value           uniform $k_inf;
+
+        // --- ALTERNATIVE: wall functions for y+ 30-300 ---
+        // type         kqRWallFunction;
+        // value        uniform $k_inf;
+    }
+
+    front
+    {
+        type            empty;
+    }
+
+    back
+    {
+        type            empty;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

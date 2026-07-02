@@ -1,135 +1,228 @@
 # Airfoil Digital Twin
 
-A local-first airfoil CFD surrogate / digital twin project using Docker-based OpenFOAM workflows, PyTorch/PyTorch Geometric for later-stage modeling, and Streamlit for a later-stage dashboard.
+This repository contains the CFD reference workflow, ML/GNN training pipeline, and digital-twin implementation layer for the NACA0012 airfoil surrogate study.
+
+The lightweight, source-controlled CFD workflow lives in:
+
+```text
+cfd/naca0012/
+```
+
+Production OpenFOAM runs and exported tensors are generated outside git and copied into ignored local data folders for ML training.
 
 ## Scope
 
-This repository is currently in CFD validation-path setup. The historical Gmsh workflow is retained only as an early geometry/plumbing prototype record; no generated Gmsh mesh is accepted as the validation mesh or as a source of CFD claims.
+This repository owns:
 
-The active CFD validation path uses NASA/TMR NACA0012 Family II grids: external grid import, patch recovery, empty-span 2D setup, documented mesh-quality exception handling, a source-generated Spalart-Allmaras baseline setup, and a new manually organized multi-model experiment workflow. No CFD validation, dataset generation, ML training, evaluation, or dashboard functionality has been completed.
+- ML-ready graph dataset construction from validated CFD exports.
+- Dataset manifests, normalization statistics, and train/validation/test splits.
+- GNN model families and reusable training loops.
+- Field and force evaluation reports.
+- Paper-ready cross-problem model-family comparison protocols.
+- Digital-twin inference wrappers and later dashboard integration.
+- Lightweight CFD case templates, study scripts, reference notes, and export tooling under `cfd/naca0012/`.
 
-See `docs/current_cfd_status.md` for the current status and gate order.
+This repository does not track:
 
-## OpenFOAM
+- full OpenFOAM run directories
+- processor decompositions
+- generated `.npz` or `.pt` datasets
+- checkpoints and experiment outputs
 
-OpenFOAM will be used through Docker, not through a native macOS installation. The verified local image is configured in `configs/openfoam_docker.yaml` as `opencfd/openfoam-run:2412` with the `openfoam2412` entrypoint.
+## First Dataset
 
-Check the configured Docker OpenFOAM image and required commands:
+The first target dataset is the validated NACA0012 L4 Spalart-Allmaras parametric CFD dataset exported by `cfd/naca0012/studies/parametricDataset`.
 
-```bash
-python scripts/check_openfoam_docker.py
-```
-
-This check verifies `blockMesh`, `checkMesh`, and `simpleFoam` through `openfoam2412 -c`; it does not create cases or run CFD.
-
-Create the historical scaffold-only NACA 0012 plumbing case:
-
-```bash
-python scripts/create_single_case.py
-```
-
-Use `python scripts/create_single_case.py --closed-te` only when explicitly inspecting the closed trailing-edge variant.
-
-The generated case is intentionally incomplete and is not CFD-valid. It is historical plumbing only and is not the active validation mesh path. See `docs/cfd_case_validation.md` before any CFD validation work.
-
-Inspect generated NACA 0012 geometry/STL artifacts before meshing:
-
-```bash
-python scripts/inspect_airfoil_geometry.py
-```
-
-Write a small rectangular Plot3D feasibility artifact for future mesh-workflow inspection:
-
-```bash
-python scripts/write_plot3d_feasibility_mesh.py
-```
-
-Historical Gmsh prototype utilities remain available for plumbing records only:
-
-```bash
-python scripts/write_gmsh_feasibility_geo.py
-```
-
-Write the first Gmsh CLI NACA 0012 airfoil prototype geometry:
-
-```bash
-python scripts/write_gmsh_airfoil_proto_geo.py
-```
-
-The first manual Gmsh airfoil mesh conversion and `checkMesh` record is documented in `docs/gmsh_airfoil_mesh_check.md`; it is not CFD validation and is not the active validation mesh.
-
-The provisional OpenFOAM patch and 2D-boundary strategy is documented in `docs/openfoam_patch_strategy.md`.
-
-After manual Gmsh conversion, update first-path strict-2D patch types only with:
-
-```bash
-python scripts/update_airfoil_boundary_patches.py --boundary-file simulations/gmsh_airfoil_proto/constant/polyMesh/boundary
-```
-
-Re-run `checkMesh` manually after patch-type changes; this does not create solver boundary conditions.
-
-The first strict 2D patch update and post-update `checkMesh` record is documented in `docs/openfoam_2d_patch_check.md`; it is not CFD validation.
-
-The planned first minimal laminar OpenFOAM case files are documented in `docs/openfoam_laminar_case_plan.md`; no solver setup has been created yet.
-
-After mesh conversion, patch updates, and boundary review, write minimal laminar smoke-test files with:
-
-```bash
-python scripts/write_laminar_case_files.py --case-dir simulations/gmsh_airfoil_proto
-```
-
-These files still require manual OpenFOAM parsing/checks and are not CFD validation.
-
-The first manual OpenFOAM parsing and post-file `checkMesh` gate for the laminar smoke-test files is recorded in `docs/openfoam_laminar_parse_check.md`.
-
-The first `simpleFoam` smoke test reached `Time = 1` before exposing a missing `fvSchemes` divergence entry; this is documented as a plumbing issue, not CFD validation.
-
-The first successful 5-iteration `simpleFoam` plumbing smoke test is recorded in `docs/openfoam_simplefoam_smoke_test.md`; it is not convergence or CFD validation.
-
-ParaView visual inspection found the current mesh too coarse for field or force interpretation; see `docs/mesh_visual_inspection.md`.
-
-The current Gmsh/simpleFoam case is not the validation base case. The validation-base-case decision has moved to a NASA/TMR NACA 0012 setup with Ladson NASA TM 4074 as the preferred experimental/reference anchor; see `docs/validation_base_case_decision.md`.
-
-The NASA/TMR mesh-import and setup path is documented in `docs/tmr_naca0012_mesh_import_plan.md` and summarized in `docs/current_cfd_status.md`. The organized manual multi-model workflow is documented in `docs/naca0012_multimodel_case_workflow.md`.
-
-## Organized NACA0012 Layout
-
-The current intended local project layout for the manual NASA/TMR NACA0012 workflow is:
+Initial domain:
 
 ```text
-naca0012/
-├── familyII_449x129/
-│   ├── makemodelfolders.sh
-│   ├── naca0012_base/
-│   ├── postprocess-script.py
-│   └── runsimulations.sh
-├── grids/
-└── papers/
+Airfoil:          NACA0012
+Mesh:             NASA/TMR Family II L4
+Solver:           simpleFoam, incompressible steady RANS
+Turbulence model: Spalart-Allmaras
+AoA range:        -4 to 16 deg
+Re range:         3e6 to 9e6
+Production time:  10000 SIMPLE iterations
 ```
 
-The active manual base case is `naca0012/familyII_449x129/naca0012_base`. The helper scripts `makemodelfolders.sh`, `runsimulations.sh`, and `postprocess-script.py` are project-owned automation candidates only if they live inside this repository and are reviewed as lightweight scripts, not generated solver artifacts.
+Initial graph contract:
 
-Downloaded grids and papers under `naca0012/grids/` and `naca0012/papers/`, generated model runs, `processor*` folders, logs, time directories, `postProcessing`, plots, and other solver outputs must remain out of git unless explicitly reduced to lightweight metadata or documentation.
+```text
+x         = geometry, mesh, and boundary features only
+edge_attr = [dx, dz, dist, angle]
+u         = [Re_norm, AoA_norm]
+y         = [Ux_norm, Uz_norm, p_norm, nuTilda_norm]
+```
 
-## Validation-First Plan
+`nuTilda` is a supervised target for the Spalart-Allmaras model. It must not be used as a runtime input feature.
 
-The first CFD validation step should use the NASA/TMR NACA0012 path before any broad dataset generation. This keeps the workflow focused on reproducibility, solver configuration, mesh quality, and result sanity before scaling.
+## No-Leakage Rule
 
-The provisional serious target is NACA0012 at Mach `0.15`, Reynolds number `6e6`, chord `1`, fully turbulent RANS, with `Cp`, `Cl`, and `Cd` validation outputs. Dataset generation, ML tuning, and benchmark claims remain blocked until the validation case passes reference comparison gates.
+Deployable surrogate and dashboard inputs must not require CFD solution fields from the case being predicted.
 
-## AI Workflow
+Allowed inputs include:
 
-See `docs/ai_workflow.md` for the lead-coder/reviewer workflow and review bundle generation for non-tool Ollama models.
+- mesh or graph-template information
+- geometry-derived features
+- boundary/patch classification
+- Reynolds number
+- angle of attack
 
-## Benchmarking
+Disallowed runtime inputs include:
 
-Initial benchmarking should be internal only, using held-out local OpenFOAM cases generated by the project workflow. Literature comparisons should happen only after source and protocol verification.
+- `U`
+- `p`
+- `nuTilda`
+- `nut`
+- force coefficients from the same case
+- residuals or convergence diagnostics from the same case
 
-No ML4CFD-equivalent performance is claimed. No unsupported accuracy, speedup, or runtime targets are claimed.
+Disallowed fields may be used as targets, validation labels, diagnostics, and paper metrics.
 
-## Gate 0 Setup
+## Model Comparison Position
 
-Install the local package in editable mode, then install the minimal early development dependencies:
+The paper should compare GNN model families under a shared graph-learning formulation, not force all CFD problems into identical raw feature semantics.
+
+Hold these fixed where feasible:
+
+- model family list
+- hidden dimension
+- layer count
+- dropout
+- optimizer and scheduler
+- early stopping
+- seed policy
+- evaluation report format
+
+Allow these to be dataset-specific:
+
+- `in_dim`
+- `edge_dim`
+- `condition_dim`
+- `out_dim`
+- feature semantics
+- target semantics
+- problem-specific physical metrics
+
+Changing input dimension or global-condition dimension is a dataset-adapter choice, not a change of model family.
+
+## Directory Layout
+
+```text
+configs/
+├── datasets/        # Dataset configs and tensor contracts
+├── experiments/     # Model/training experiment configs
+└── digital_twin/    # Runtime surrogate configs
+cfd/naca0012/        # Lightweight CFD workflow, references, and exporters
+dashboard/           # Later Streamlit interface
+data/                # Local/generated data placeholders; heavy contents ignored
+docs/                # Active project protocols
+scripts/             # Thin CLI wrappers
+src/airfoil_dt/
+├── datasets/        # CFD-export ingestion, graph building, stats, splits
+├── digital_twin/    # Runtime inference wrappers and validity checks
+├── evaluation/      # Metrics, plots, reports
+├── models/          # GNN model families
+├── training/        # Trainers, losses, schedulers
+└── utils/           # Shared utilities
+```
+
+Generated data, checkpoints, results, and large graph tensors are excluded from git.
+
+## GNN Pipeline
+
+The current GNN implementation contains:
+
+```text
+src/airfoil_dt/datasets/
+├── openfoam_fields.py   # Manifest and CFD field snapshot boundary layer
+├── graph_builder.py     # Builds x, edge_index, edge_attr, u, y graph tensors
+├── normalization.py     # Training-only normalization stats
+├── splits.py            # Train/validation/test split utilities
+└── naca0012.py          # Lazy dataset for saved .pt graph files with runtime normalization
+src/airfoil_dt/models/   # GCN, GAT, GraphSAGE, GIN, MPNN, Graph U-Net, MeshGraphNet, model factory
+src/airfoil_dt/training/ # Generic supervised losses, scheduler, trainer utilities
+src/airfoil_dt/evaluation/ # Field metrics, coefficient helpers, reports
+```
+
+The raw field reader is intentionally explicit: reduced `.npz` exports are supported now for testing, while direct raw-case parsing will be finalized after the completed CFD batch export format is confirmed.
+
+The runnable CLI path now supports saved graph files through training and held-out evaluation:
+
+- `export_naca_graphs.py` writes PyTorch Geometric `.pt` graphs.
+- `check_graph_dataset.py` validates graph tensor shapes, finite values, connectivity, and split coverage.
+- `compute_stats.py` computes normalization statistics from the training split only when `--splits` is supplied.
+- `train_experiment.py` trains a configured GNN and writes checkpoints/history.
+- `evaluate_experiment.py` evaluates a checkpoint on a held-out split and writes per-case and aggregate metrics.
+
+## GNN Command Flow
+
+After usable CFD cases are exported from `cfd/naca0012/studies/parametricDataset`, the flow is:
+
+```bash
+python scripts/export_naca_graphs.py --manifest data/raw/naca0012_l4_sa/manifest.csv --input-format npz
+python scripts/build_splits.py --manifest data/raw/naca0012_l4_sa/manifest.csv --out data/splits/naca0012_l4_sa_splits.json
+python scripts/check_graph_dataset.py --graph-dir data/processed/naca0012_l4_sa/graphs --splits data/splits/naca0012_l4_sa_splits.json
+python scripts/compute_stats.py --graph-dir data/processed/naca0012_l4_sa/graphs --splits data/splits/naca0012_l4_sa_splits.json
+python scripts/train_experiment.py --config configs/experiments/naca0012_gcn_smoke.yaml
+python scripts/evaluate_experiment.py --config configs/experiments/naca0012_gcn_smoke.yaml
+```
+
+The imported `.npz` manifest uses `source_path` entries relative to `data/raw/naca0012_l4_sa/manifest.csv`, so use that manifest directly unless paths are rewritten.
+
+Default outputs are written under:
+
+```text
+runs/<experiment_name>/
+├── config.yaml
+├── dataset_paths.json
+├── history.csv
+├── summary.json
+├── checkpoints/
+│   ├── best.pt
+│   └── last.pt
+└── evaluation/
+    ├── test_case_metrics.csv
+    └── test_metrics.json
+```
+
+Experiment configs exist for:
+
+```text
+naca0012_gcn.yaml
+naca0012_gcn_smoke.yaml
+naca0012_gat.yaml
+naca0012_sage.yaml
+naca0012_gin.yaml
+naca0012_mpnn.yaml
+naca0012_graph_unet.yaml
+naca0012_meshgraphnet.yaml
+naca0012_meshgraphnet_smoke.yaml
+```
+
+## Development Gates
+
+1. Confirm completed CFD cases and final exported fields from `cfd/naca0012/studies/parametricDataset`.
+2. Export reduced `.npz` field snapshots with `cell_centers`, `owner`, `neighbour`, `U`, `p`, and `nuTilda`.
+3. Export PyTorch Geometric graphs and validate tensor shapes, metadata, connectivity, and no NaN/Inf values.
+4. Build AoA/Re-aware train/validation/test splits.
+5. Compute normalization statistics from training cases only.
+6. Run a two-epoch smoke training job in the GNN environment.
+7. Evaluate the smoke checkpoint on held-out graphs.
+8. Train the full model-family comparison.
+9. Add digital-twin inference wrappers after a trained model can load and infer reliably.
+
+## Important Docs
+
+- `docs/project_overview.md`
+- `docs/dataset_protocol.md`
+- `docs/model_comparison_protocol.md`
+- `docs/digital_twin_scope.md`
+- `AGENTS.md`
+
+## Setup
+
+Install the package and current lightweight dependencies:
 
 ```bash
 python -m pip install -e .
@@ -147,3 +240,9 @@ Run tests:
 ```bash
 python -m pytest
 ```
+
+Training requires an environment with `torch`, `torch-geometric`, `numpy`, and `pyyaml`. Dashboard dependencies such as VTK/PyVista, Streamlit, and Plotly are still deferred until the dashboard implementation phase.
+
+## Claim Boundary
+
+No benchmark, speedup, accuracy, or ML4CFD-equivalent claim is valid until it is backed by documented protocol checks and held-out evaluation.

@@ -1,0 +1,190 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// SOLUTION ALGORITHMS AND LINEAR SOLVERS — simpleFoam
+//
+// ALGORITHM: SIMPLEC (consistent SIMPLE)
+//   - 'consistent yes' enables SIMPLEC: less under-relaxation is usually
+//     needed than standard SIMPLE for steady aerodynamic flows.
+//   - This file keeps conservative relaxation values for the first automated
+//     turbulence-model sweep; increase relaxation only after each model is stable.
+//
+// PRESSURE SOLVER: GAMG
+//   - Algebraic multigrid is a robust pressure solver for this large structured
+//     C-grid airfoil case.
+//   - GaussSeidel smoother is kept for robustness and portability across models.
+//
+// VELOCITY + TURBULENCE: PBiCGStab with DILU
+//   - Robust for convection-dominated high-Re external-aerodynamics equations.
+//   - DILU is an efficient preconditioner for non-symmetric momentum and
+//     turbulence-transport systems.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    // ── PRESSURE ────────────────────────────────────────────────────────
+    p
+    {
+        solver              GAMG;
+        smoother            GaussSeidel;
+        agglomerator        faceAreaPair;
+        mergeLevels         1;
+        nCellsInCoarsestLevel 10;
+        cacheAgglomeration  true;
+        nPreSweeps          0;
+        nPostSweeps         2;
+        nFinestSweeps       2;
+        tolerance           1e-10;
+        relTol              0;       // solve to absolute tolerance; no relative early stop
+    }
+
+    // Compatibility entry; simpleFoam normally uses p, but keeping pFinal is harmless.
+    pFinal
+    {
+        $p;
+        relTol              0;          // tighter convergence on final solve
+    }
+
+    // ── VELOCITY ────────────────────────────────────────────────────────
+    U
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-10;
+        relTol          0;
+    }
+
+    UFinal { $U; relTol 0; }
+
+    // ── OPTIONAL MODEL-SWITCH SUPPORT: k-ω SST ──────────────────────────
+    // These entries are intentionally kept so this case directory can be
+    // switched between turbulence models. Only fields required by the
+    // selected model are solved.
+    k
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-09;
+        relTol          0.01;
+    }
+
+    kFinal { $k; relTol 0; }
+
+    omega
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-09;
+        relTol          0.01;
+    }
+
+    omegaFinal { $omega; relTol 0; }
+
+    // ── SPALART-ALLMARAS ─────────────────────────────────────────────────
+    nuTilda
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-09;
+        relTol          0.01;
+    }
+
+    nuTildaFinal { $nuTilda; relTol 0; }
+
+    // ── OPTIONAL MODEL-SWITCH SUPPORT: k-ε VARIANTS ─────────────────────
+    // Kept for easy switching to k-epsilon-family models.
+    epsilon
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-09;
+        relTol          0.01;
+    }
+
+    epsilonFinal { $epsilon; relTol 0; }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+SIMPLE
+{
+    // SIMPLEC: 'consistent yes' enables the velocity correction that
+    // gives SIMPLEC better relaxation behavior than standard SIMPLE.
+    // This is an incompressible simpleFoam case, so only 'consistent' applies.
+
+    // Non-orthogonal corrector loops within each SIMPLE iteration.
+    // 1 correction is appropriate for the NASA TMR C-grid.
+    // Increase to 2-3 only if checkMesh reports max non-ortho > 60°.
+    nNonOrthogonalCorrectors 1;
+
+    // ── CONVERGENCE CRITERIA ─────────────────────────────────────────────
+    // SIMPLE stops early if all active solved fields satisfy these limits.
+    // Extra entries are intentionally kept for model switching; inactive
+    // turbulence fields are not solved by the selected turbulence model.
+    // For validation, also require stable CL, CD, and CM histories.
+    residualControl
+    {
+        p               1e-08;
+        U               1e-08;
+        k               1e-08;
+        omega           1e-08;
+        nuTilda         1e-08;
+        epsilon         1e-08;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+relaxationFactors
+{
+    // ── RELAXATION STRATEGY ───────────────────────────────────────────────
+    //
+    // With SIMPLEC (consistent yes), relatively high relaxation is possible,
+    // but the first turbulence-model sweep should remain conservative.
+    // Actual starting values used here:
+    //
+    //   p       = 0.7
+    //   U       = 0.7
+    //   nuTilda = 0.5  (SA is often the most sensitive transport equation)
+    //   k/omega/epsilon = 0.7
+    //
+    // If divergence occurs, especially for k-epsilon-family models:
+    //   → Reduce U to 0.5–0.6 and turbulence equations to 0.5
+    //   → Check y+ and wall-treatment compatibility
+    //
+    // If all models are stable but converge slowly:
+    //   → Increase p toward 0.9 and U toward 0.8–0.9
+    //   → Keep turbulence relaxation conservative until force histories are flat
+    // ─────────────────────────────────────────────────────────────────────
+
+    fields
+    {
+        p               0.7;
+    }
+
+    equations
+    {
+        U               0.7;
+        k               0.7;
+        omega           0.7;
+        nuTilda         0.5;
+        epsilon         0.7;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

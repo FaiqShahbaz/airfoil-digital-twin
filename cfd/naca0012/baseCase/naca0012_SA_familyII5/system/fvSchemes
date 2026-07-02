@@ -1,0 +1,144 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// DISCRETISATION SCHEMES — simpleFoam, incompressible, steady RANS
+//
+// DESIGN BASIS:
+//
+// [1] Diskin et al. (2015): SA turbulence convection should be treated
+//     with a second-order scheme for paper-level comparison. Their study
+//     found first-order SA convection significantly degraded viscous-drag
+//     accuracy and eddy-viscosity convergence. Use linearUpwind here for
+//     SA, SST, and k-epsilon-family transport equations.
+//
+// [2] Alletto wiki (NACA0012): for incompressible flow, linearUpwind
+//     on momentum is accurate and robust. Central (linear) schemes are
+//     only needed for transonic/supersonic flows to resolve shocks.
+//
+// [3] Golmirzaee & Wood (2024): structured mesh near TE — corrected
+//     laplacian and snGrad schemes needed for non-orthogonal correction.
+//
+// [4] non-orthogonal correction: the NASA TMR C-grid has moderate
+//     non-orthogonality near the trailing edge singularity. 'corrected'
+//     handles this without stability issues for well-refined grids.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    // Steady-state: steadyState (no time derivative computed)
+    default         steadyState;
+}
+
+gradSchemes
+{
+    // cellLimited Gauss linear 1: Gauss theorem with linear interpolation
+    // and cell-based gradient limiting (limiter=1 → TVD-like).
+    // More stable than plain 'Gauss linear' on stretched C-grid cells.
+    default         cellLimited Gauss linear 1;
+
+    // Named gradient fields — explicitly second-order for reconstruction
+    // in linearUpwind divergence schemes below
+    grad(U)         cellLimited Gauss linear 1;
+    grad(p)         Gauss linear;
+    grad(k)         cellLimited Gauss linear 1;
+    grad(omega)     cellLimited Gauss linear 1;
+    grad(nuTilda)   cellLimited Gauss linear 1;
+    grad(epsilon)   cellLimited Gauss linear 1;
+}
+
+divSchemes
+{
+    // No implicit default — all div terms must be named explicitly.
+    // This prevents accidental use of a wrong scheme.
+    default         none;
+
+    // ── MOMENTUM ─────────────────────────────────────────────────────────
+    // bounded Gauss linearUpwind:
+    //   - 'bounded': applies NVD/TVD bounding for convection-dominated flow,
+    //     prevents unphysical oscillations near stagnation and leading edge
+    //   - 'linearUpwind': 2nd-order upwind-biased reconstruction;
+    //     broadly comparable in purpose to MUSCL-type upwind-biased schemes,
+    //     but not identical to the reference solvers' implementations
+    //   - Alletto wiki: linear and linearUpwind give similar results for
+    //     incompressible flow; linearUpwind is more robust
+    div(phi,U)      bounded Gauss linearUpwind grad(U);
+
+    // ── k-ω SST TURBULENCE ───────────────────────────────────────────────
+    // CRITICAL (Diskin et al. 2015): 2nd order required.
+    // 'bounded' prevents negative k and omega in recirculation regions.
+    div(phi,k)      bounded Gauss linearUpwind grad(k);
+    div(phi,omega)  bounded Gauss linearUpwind grad(omega);
+
+    // ── SPALART-ALLMARAS ─────────────────────────────────────────────────
+    // Second-order turbulence convection is important for the Diskin et al.
+    // reference comparison; bounded form improves robustness near the TE.
+    div(phi,nuTilda) bounded Gauss linearUpwind grad(nuTilda);
+
+    // ── k-ε VARIANTS ─────────────────────────────────────────────────────
+    div(phi,epsilon) bounded Gauss linearUpwind grad(epsilon);
+
+    // ── VISCOUS STRESS DIVERGENCE ─────────────────────────────────────────
+    // These terms appear in the momentum equation RHS for Newtonian fluids.
+    // OpenFOAM 2412 SpalartAllmaras requests the nuEff*dev2 form.
+    // The extra forms are retained for model-switching compatibility.
+    div((nuEff*dev(T(grad(U)))))        Gauss linear;
+    div((nuEff*dev2(T(grad(U)))))       Gauss linear;
+    div((nu+nut)*dev(T(grad(U))))       Gauss linear;
+    div((nu+nut)*dev2(T(grad(U))))      Gauss linear;
+    div((-dev(R)))                      Gauss linear;
+
+    // Catch-all for model-specific transported scalars during model switching.
+    // For a locked-down validation run, replace this with explicit entries
+    // for every active divergence term reported by OpenFOAM.
+    div(phi,.) bounded Gauss linearUpwind default;
+}
+
+laplacianSchemes
+{
+    // 'corrected': applies explicit non-orthogonal correction.
+    // Required for the NASA TMR C-grid where trailing-edge cells
+    // have moderate non-orthogonality (see Golmirzaee & Wood 2024,
+    // Section 4.3 — structured mesh reduces but does not eliminate it).
+    // Safe for non-orthogonality < 70°; use 'limited corrected 0.5'
+    // if checkMesh reports max non-orthogonality > 70°.
+    default         Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+    // linear: second-order face interpolation (standard choice)
+    default         linear;
+}
+
+snGradSchemes
+{
+    // corrected: applies non-orthogonal correction to surface-normal gradients.
+    // Consistent with laplacianSchemes above.
+    default         corrected;
+}
+
+// ── WALL DISTANCE ──────────────────────────────────────────────────────────
+// Required by kOmegaSST (F1/F2 blending functions use y-distance)
+// and SpalartAllmaras (destruction term denominator).
+// meshWave: fastest; geometrically exact for structured grids.
+wallDist
+{
+    method          meshWave;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

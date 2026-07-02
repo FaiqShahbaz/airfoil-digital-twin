@@ -1,0 +1,70 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      epsilon;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// TURBULENT DISSIPATION RATE  epsilon  [m²/s³]
+// Used by: kEpsilon, realizableKE, RNGkEpsilon, LaunderSharmaKE
+// NOT used by: kOmegaSST, kOmega, SpalartAllmaras
+//
+// This file must exist in 0/ for ALL model runs. OpenFOAM 2412 ignores
+// it when a non-epsilon model is active, but its absence causes
+// "field not found" warnings from some function objects.
+//
+// epsilon_inf = Cmu * k^2 / nut
+//             = 0.09 * (0.00397557)^2 / (8.58e-7)
+//             = 0.09 * 1.58052e-5 / 8.58e-7
+//             = 1.6578 m²/s³
+//
+// Wall BC: epsilonWallFunction
+//   Standard high-Re log-law formula: epsilon_w = Cmu^0.75 * k^1.5 / (kappa*y)
+//   For LaunderSharmaKE (low-Re k-eps, y+ < 1): makeModelFolders.sh
+//   automatically changes this to zeroGradient for that model.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include        "include/initialConditions"
+
+dimensions      [0 2 -3 0 0 0 0];
+
+internalField   uniform $epsilon_inf;
+
+boundaryField
+{
+    farfield
+    {
+        type            freestream;
+        freestreamValue uniform $epsilon_inf;
+        value           uniform $epsilon_inf;
+    }
+
+    airfoil
+    {
+        type            epsilonWallFunction;    // high-Re; LaunderSharmaKE: zeroGradient
+        value           uniform $epsilon_inf;
+    }
+
+    front
+    {
+        type            empty;
+    }
+
+    back
+    {
+        type            empty;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

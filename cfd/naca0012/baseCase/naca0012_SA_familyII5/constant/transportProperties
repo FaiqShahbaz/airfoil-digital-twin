@@ -1,0 +1,35 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      transportProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// FLUID: Air at ~20°C, incompressible (Ma ≈ 0.15, compressibility negligible)
+//
+// Conditions matched to:
+//   Ladson (1988), NASA TM-4074        : Re = 5.95×10⁶, Ma = 0.15
+//   Diskin et al. (2015), AIAA-2015-1746: Re = 6×10⁶,   Ma = 0.15
+//   Golmirzaee & Wood (2024), Adv.Aerodyn: Re = 6×10⁶,  U∞ = 51.48 m/s
+//
+// Derivation:
+//   Re = U∞ × c / ν  →  ν = 51.48 × 1.0 / 6×10⁶ = 8.58×10⁻⁶ m²/s
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+transportModel  Newtonian;
+
+// Kinematic viscosity [m²/s]
+nu              8.58e-06;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

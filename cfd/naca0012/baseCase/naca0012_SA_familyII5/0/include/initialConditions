@@ -1,0 +1,94 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// ============================================================
+//  MASTER INITIAL CONDITIONS — edit ONLY this file
+//
+//  Low-Mach incompressible setup for comparison with the NASA TMR
+//  NACA 0012 reference case of Diskin et al. (2015):
+//    chord c = 1.0 m, U_inf and nu chosen to match Re_c = 6e6
+//    Patch names: farfield, airfoil, front, back
+//
+//  To run a different AoA in this Docker workflow:
+//    1. Change AoA below
+//    2. Manually recompute AoA_rad, Ux, Uz, and flowVelocity
+//    3. Update liftDir/dragDir in system/controlDict forceCoeffs
+//
+//  NOTE: #calc is intentionally avoided because the Docker runtime may not
+//  include the full wmake/codeStream toolchain needed to compile dynamicCode.
+// ============================================================
+
+// ------------------------------------------------------------
+// ANGLE OF ATTACK [degrees]
+// Validated points: 0, 4, 5, 10, 14
+// ------------------------------------------------------------
+AoA             10;
+AoA_rad         0.174532925199433;
+
+// ------------------------------------------------------------
+// FREESTREAM SPEED
+// Re = U_inf * c / nu  =>  U_inf = Re * nu / c
+// Re = 6e6,  nu = 8.58e-6,  c = 1.0  => U_inf = 51.48 m/s
+// NOTE: This simpleFoam case uses an incompressible low-Mach workflow.
+//       The reference paper solved compressible RANS at M_inf = 0.15,
+//       described there as essentially incompressible. Here, U_inf and
+//       nu are chosen so that Re_c = 6e6 for c = 1 m.
+// ------------------------------------------------------------
+U_inf           51.48;      // m/s
+
+// Velocity components for flow in x-z plane
+// x = streamwise (chord direction at AoA=0)
+// z = wall-normal (upward)
+// y = spanwise (empty direction for 2D)
+// AoA=10°: Ux = 51.48*cos(10°) = 51.48*0.98481 = 50.6979
+//          Uz = 51.48*sin(10°) = 51.48*0.17365 =  8.9382
+Ux              50.6979;
+Uz              8.9382;
+flowVelocity    (50.6979 0 8.9382);
+
+// Gauge pressure reference
+pressure        0;          // [m²/s²] kinematic, gauge
+
+// ------------------------------------------------------------
+// FLUID PROPERTIES
+// ------------------------------------------------------------
+nu              8.58e-06;   // effective incompressible nu chosen for Re_c=6e6
+rhoInf          1.225;      // air density [kg/m³] — for force coefficients
+
+// ------------------------------------------------------------
+// TURBULENCE QUANTITIES
+// Strategy: keep SST/k-epsilon support values available for model switching,
+//   while matching the Diskin et al. SA reference with nuTilda_inf = 3*nu.
+//   Turbulence intensity I = 0.1% and viscosity ratio nut/nu = 0.1 are
+//   used only by models that require k/omega/epsilon-style freestream data.
+//
+// k   = 1.5 * (U_inf * I)^2
+//     = 1.5 * (51.48 * 0.001)^2 = 3.9756e-3 m²/s²
+//
+// omega = k / (nutRatio * nu)
+//       = 3.9756e-3 / (0.1 * 8.58e-6) = 4633.53 1/s
+//
+// nut   = nutRatio * nu = 0.1 * 8.58e-6 = 8.58e-7 m²/s
+//
+// epsilon = Cmu * k^2 / nut
+//         = 0.09 * (3.9756e-3)^2 / (8.58e-7)
+//         = 0.09 * 1.58054e-5 / 8.58e-7
+//         = 1.6578 m²/s³
+//
+// nuTilda (SA): Diskin et al. NACA 0012 SA reference uses 3 * nu_inf.
+//   We use 3 * nu = 3 * 8.58e-6 = 2.574e-5 m²/s to match exactly.
+// ------------------------------------------------------------
+turbIntensity   0.001;      // 0.1% turbulence intensity (fraction)
+
+k_inf           0.00397557;
+nutRatio        0.1;
+nut_inf         8.58e-07;
+omega_inf       4633.53;
+epsilon_inf     1.6578;     // Cmu * k^2 / nut = 0.09 * (3.9756e-3)^2 / (8.58e-7)
+nuTilda_inf     2.574e-05;  // SA farfield: 3*nu (Diskin et al. 2015)
+
+// ============================================================

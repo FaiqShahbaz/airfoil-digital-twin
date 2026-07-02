@@ -1,0 +1,69 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// VELOCITY FIELD
+//
+// BC choices use the OpenFOAM freestream farfield style, closest to
+// Golmirzaee & Wood (2024) BC-2, adapted to this single-patch C-grid farfield:
+//   farfield  : freestreamVelocity
+//   airfoil   : noSlip
+//   front/back: empty              — 2D homogeneous direction
+//
+// freestreamVelocity: OpenFOAM 2412 standard farfield BC for incompressible
+//   external-aerodynamics cases.
+//   Applies fixedValue when flux points inward (inlet behaviour).
+//   Applies zeroGradient when flux points outward (outlet behaviour).
+//   Appropriate for this C-grid farfield patch where inlet-like, outlet-like,
+//   and lateral farfield regions are combined into one boundary patch.
+//
+// noSlip: enforces U = (0,0,0) at the airfoil wall. Preferred over
+//   fixedValue (0 0 0) in OpenFOAM 2412 — cleaner and equivalent.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include        "include/initialConditions"
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform $flowVelocity;
+
+boundaryField
+{
+    farfield
+    {
+        type            freestreamVelocity;
+        freestreamValue uniform $flowVelocity;
+        value           uniform $flowVelocity;
+    }
+
+    airfoil
+    {
+        type            noSlip;
+    }
+
+    front
+    {
+        type            empty;
+    }
+
+    back
+    {
+        type            empty;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

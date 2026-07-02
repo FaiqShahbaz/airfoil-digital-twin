@@ -1,0 +1,72 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      nuTilda;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// SPALART-ALLMARAS MODIFIED VISCOSITY  nuTilda  [m²/s]
+// Used by: SpalartAllmaras ONLY
+// NOT used by: kOmegaSST, kEpsilon
+//
+// Model-switching note:
+//   This field is active only for SpalartAllmaras. It is kept in 0/ so the
+//   same case directory can switch between turbulence models without
+//   rebuilding the initial-condition set.
+//
+// Farfield value:
+//   Diskin et al. NACA 0012 SA reference case uses:
+//     nuTilda_farfield = 3 * nu_inf
+//   With nu = 8.58e-6 m²/s:
+//     nuTilda_inf = 2.574e-5 m²/s
+//
+// Wall BC:
+//   fixedValue = 0: nuTilda = 0 at no-slip wall (exact condition for SA model)
+//   This is not a wall function — SA model integrates to the wall directly.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include        "include/initialConditions"
+
+dimensions      [0 2 -1 0 0 0 0];
+
+internalField   uniform $nuTilda_inf;
+
+boundaryField
+{
+    farfield
+    {
+        type            freestream;
+        freestreamValue uniform $nuTilda_inf;
+        value           uniform $nuTilda_inf;
+    }
+
+    airfoil
+    {
+        // SA model integrates to wall — nuTilda = 0 at no-slip surface
+        type            fixedValue;
+        value           uniform 0;
+    }
+
+    front
+    {
+        type            empty;
+    }
+
+    back
+    {
+        type            empty;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

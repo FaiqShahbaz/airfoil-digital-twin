@@ -1,0 +1,7 @@
+case_id,source_study,source_path,aoa_deg,re,nu,model,mesh_level,end_time,write_interval,purge_write,role,status
+anchor_aoa_0,aoaVariation,../aoaVariation/runs/aoa_0,0,6000000,8.58000000e-06,SpalartAllmaras,L4,10000,1000,source_case,anchor,external_anchor
+anchor_aoa_10,aoaVariation,../aoaVariation/runs/aoa_10,10,6000000,8.58000000e-06,SpalartAllmaras,L4,10000,1000,source_case,anchor,external_anchor
+anchor_aoa_15,aoaVariation,../aoaVariation/runs/aoa_15,15,6000000,8.58000000e-06,SpalartAllmaras,L4,10000,1000,source_case,anchor,external_anchor
+cd_000,convergenceDepth,runs/cd_000,-4,3000000,1.71600000e-05,SpalartAllmaras,L4,10000,1000,0,new,pending
+cd_001,convergenceDepth,runs/cd_001,12,3000000,1.71600000e-05,SpalartAllmaras,L4,10000,1000,0,new,pending
+cd_002,convergenceDepth,runs/cd_002,16,9000000,5.72000000e-06,SpalartAllmaras,L4,10000,1000,0,new,pending

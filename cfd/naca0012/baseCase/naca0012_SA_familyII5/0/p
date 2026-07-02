@@ -1,0 +1,74 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      p;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// KINEMATIC PRESSURE  p = p_static / rho   [m²/s²]
+//
+// BC choices for this incompressible OpenFOAM low-Mach comparison:
+//   farfield : freestreamPressure — companion to freestreamVelocity
+//   airfoil  : zeroGradient       — standard wall pressure condition
+//   front/back: empty
+//
+// The Diskin et al. reference paper used compressible RANS solvers with
+// characteristic farfield conditions. This simpleFoam case instead uses the
+// incompressible freestreamPressure/freestreamVelocity pair as a practical
+// low-Mach approximation for the C-grid farfield.
+//
+// freestreamPressure: companion to freestreamVelocity.
+//   Applies zeroGradient when flux points inward (inlet → pressure floats).
+//   Applies fixedValue=$pressure when flux points outward (outlet → fixes gauge ref).
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include        "include/initialConditions"
+
+dimensions      [0 2 -2 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    farfield
+    {
+        type            freestreamPressure;
+        freestreamValue uniform $pressure;
+        value           uniform $pressure;
+    }
+
+    airfoil
+    {
+        type            zeroGradient;
+    }
+
+    front
+    {
+        type            empty;
+    }
+
+    back
+    {
+        type            empty;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// Physical note: for incompressible RANS, only the pressure gradient matters.
+// Setting p=0 at the farfield/outlet fixes the gauge reference — absolute
+// value has no physical meaning. Since p is kinematic pressure, Cp should be
+// computed as (p - p_ref)/(0.5*U_inf^2), with p_ref = 0 for this setup.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

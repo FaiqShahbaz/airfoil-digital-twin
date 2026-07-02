@@ -1,12 +1,13 @@
 pytest
+pygments
 numpy
 scipy
 matplotlib
 pyyaml
+torch
+torch-geometric
 
-# Later-stage dependencies, intentionally not installed for Gate 0:
-# torch
-# torch-geometric
+# ML/dashboard dependencies will be enabled when implementation begins:
 # vtk
 # pyvista
 # streamlit

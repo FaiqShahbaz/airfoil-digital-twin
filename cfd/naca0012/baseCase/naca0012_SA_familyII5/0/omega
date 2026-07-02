@@ -1,0 +1,73 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      omega;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// SPECIFIC DISSIPATION RATE  omega  [1/s]
+// Used by: kOmegaSST, kOmega
+// NOT used by: SpalartAllmaras, kEpsilon
+//
+// Farfield value:
+//   omega = k / (nutRatio * nu) ≈ 4634 s⁻¹ for the current values in
+//   include/initialConditions.
+//
+// Model-switching note:
+//   This field is inactive for SpalartAllmaras. It is kept so the same case
+//   directory can be switched to kOmegaSST or kOmega without rebuilding the
+//   initial-condition set.
+//
+// Wall BC — omegaWallFunction:
+//   omegaWallFunction is used here as a robust model-switching default. In
+//   OpenFOAM 2412 it blends near-wall omega behavior based on local y+ and
+//   can run on both low-y+ and wall-function-style meshes. For a locked-down
+//   low-y+ validation run, this wall treatment should still be checked with
+//   y+ values and force/Cp/Cf sensitivity.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include        "include/initialConditions"
+
+dimensions      [0 0 -1 0 0 0 0];
+
+internalField   uniform $omega_inf;
+
+boundaryField
+{
+    farfield
+    {
+        type            freestream;
+        freestreamValue uniform $omega_inf;
+        value           uniform $omega_inf;
+    }
+
+    airfoil
+    {
+        // Robust model-switching default; verify y+ and force/Cf sensitivity
+        type            omegaWallFunction;
+        value           uniform $omega_inf;
+    }
+
+    front
+    {
+        type            empty;
+    }
+
+    back
+    {
+        type            empty;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

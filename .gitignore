@@ -8,57 +8,39 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# Environments
+# Environments and local secrets
 .venv/
 .env
 .env.*
 
-# Data and generated artifacts
+# Generated ML data and artifacts
 data/raw/
 data/interim/
 data/processed/
 data/splits/
 data/manifests/
-simulations/cases/
+data/**/*.npz
+data/**/*.pt
 results/
 checkpoints/
 review_bundles/
+runs/
+
+# Generated CFD/OpenFOAM data and artifacts
+cfd/**/runs/
+cfd/**/processor*/
+cfd/**/postProcessing/
+cfd/**/exports/
+cfd/**/ascii_cases*/
+cfd/**/log.*
+cfd/**/*.foam
+cfd/**/*.vtp
+cfd/**/*.raw
+cfd/**/*.npz
+cfd/**/*.pt
+cfd/**/grids/
+cfd/**/papers/
+cfd/**/ReferenceResults/
 
 # Logs
 *.log
-
-# OpenFOAM generated runtime artifacts
-processor*/
-postProcessing/
-log.*
-dynamicCode/
-VTK/
-sets/
-surfaces/
-
-# NACA0012 local workflow generated artifacts
-naca0012/**/processor*/
-naca0012/**/postProcessing/
-naca0012/**/log.*
-naca0012/**/*.log
-naca0012/**/dynamicCode/
-naca0012/**/VTK/
-naca0012/**/sets/
-naca0012/**/surfaces/
-naca0012/**/[1-9]*/
-naca0012/**/runs/
-naca0012/**/results/
-
-# Downloaded NASA/TMR grids and reference papers
-naca0012/grids/**/*.gz
-naca0012/grids/**/*.zip
-naca0012/grids/**/*.tar
-naca0012/grids/**/*.tar.gz
-naca0012/grids/**/*.tgz
-naca0012/grids/**/*.p3d
-naca0012/grids/**/*.p3dfmt
-naca0012/grids/**/*.xyz
-naca0012/grids/**/*.cgns
-naca0012/grids/**/*.dat
-naca0012/papers/**/*.pdf
-naca0012/papers/**/*.bib
