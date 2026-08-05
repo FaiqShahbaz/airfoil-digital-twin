@@ -26,4 +26,4 @@ training:
   field_weights: [1.0, 1.0, 1.0, 1.0]
 
 evaluation:
-  metrics: [normalized_rmse, relative_l2, force_coefficient_error]
+  metrics: [normalized_rmse, relative_l2, parameter_count, inference_time, worst_case]

@@ -8,12 +8,17 @@ version = "0.1.0"
 description = "Local-first airfoil CFD surrogate and digital twin scaffold"
 requires-python = ">=3.11"
 dependencies = [
-    "numpy",
+    "numpy<2",
     "scipy",
     "matplotlib",
     "pyyaml",
     "torch",
     "torch-geometric",
+]
+
+[project.optional-dependencies]
+dashboard = [
+    "streamlit",
 ]
 
 [tool.setuptools]

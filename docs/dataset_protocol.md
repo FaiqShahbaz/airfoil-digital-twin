@@ -41,3 +41,13 @@ Normalization statistics must be computed from training cases only. Validation a
 ## Splits
 
 Splits should preserve coverage across AoA and Re. Initial splits can be stratified random splits, followed by harder protocols such as AoA extrapolation, Re extrapolation, and corner holdout.
+
+Supported split modes:
+
+- `random`: deterministic shuffled train/validation/test split for smoke tests.
+- `stratified`: coarse AoA/Re binning before assignment to preserve coverage.
+- `aoa_extrapolation`: holds out high- or low-AoA cases for test evaluation.
+- `re_extrapolation`: holds out high- or low-Re cases for test evaluation.
+- `corner_holdout`: holds out a joint AoA/Re corner for test evaluation.
+
+Normalization statistics must be recomputed from the selected training split whenever the split protocol changes.

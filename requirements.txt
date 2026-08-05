@@ -1,14 +1,14 @@
 pytest
 pygments
-numpy
+numpy<2
 scipy
 matplotlib
 pyyaml
 torch
 torch-geometric
+streamlit
 
-# ML/dashboard dependencies will be enabled when implementation begins:
+# Optional visualization dependencies for later 3D/interactive field views:
 # vtk
 # pyvista
-# streamlit
 # plotly

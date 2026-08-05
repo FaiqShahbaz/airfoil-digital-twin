@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +58,8 @@ def main() -> int:
 
     device = _select_device(args.device, torch)
     model = build_model(config["model"]).to(device)
+    num_parameters = _count_parameters(model)
+    num_trainable_parameters = _count_parameters(model, trainable_only=True)
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
@@ -70,7 +73,9 @@ def main() -> int:
         for data in dataset:
             data = data.to(device)
             batch = torch.zeros(data.x.size(0), dtype=torch.long, device=device)
+            start = time.perf_counter()
             pred_norm = model(data.x, data.edge_index, data.edge_attr, batch, data.u)
+            inference_time_s = time.perf_counter() - start
             target_norm = data.y
             pred_physical = pred_norm * (y_std + 1e-8) + y_mean
             target_physical = target_norm * (y_std + 1e-8) + y_mean
@@ -83,9 +88,13 @@ def main() -> int:
                 rmse_per_field,
                 relative_l2_per_field,
             )
+            row["inference_time_s"] = inference_time_s
             rows.append(row)
 
     aggregate = _aggregate_rows(rows)
+    aggregate["num_parameters"] = num_parameters
+    aggregate["num_trainable_parameters"] = num_trainable_parameters
+    aggregate.update(_worst_case_metrics(rows))
     out_dir = paths["out_dir"]
     out_dir.mkdir(parents=True, exist_ok=True)
     write_metrics_csv(rows, out_dir / f"{args.split}_case_metrics.csv")
@@ -140,6 +149,13 @@ def _select_device(requested: str, torch_module: Any):
     return torch_module.device("cpu")
 
 
+def _count_parameters(model: Any, trainable_only: bool = False) -> int:
+    parameters = model.parameters()
+    if trainable_only:
+        return sum(parameter.numel() for parameter in parameters if parameter.requires_grad)
+    return sum(parameter.numel() for parameter in parameters)
+
+
 def _case_metric_row(
     data: Any,
     pred_norm: Any,
@@ -178,6 +194,20 @@ def _aggregate_rows(rows: list[dict[str, object]]) -> dict[str, object]:
         if values:
             metrics[f"mean_{key}"] = sum(values) / len(values)
     return metrics
+
+
+def _worst_case_metrics(rows: list[dict[str, object]]) -> dict[str, object]:
+    worst: dict[str, object] = {}
+    for key in sorted({key for row in rows for key in row if key.startswith("physical_relative_l2_")}):
+        candidates = [row for row in rows if isinstance(row.get(key), int | float)]
+        if not candidates:
+            continue
+        row = max(candidates, key=lambda item: float(item[key]))
+        worst[f"worst_{key}"] = row[key]
+        worst[f"worst_{key}_case_id"] = row.get("case_id", "")
+        worst[f"worst_{key}_aoa_deg"] = row.get("aoa_deg", "")
+        worst[f"worst_{key}_reynolds"] = row.get("reynolds", "")
+    return worst
 
 
 if __name__ == "__main__":

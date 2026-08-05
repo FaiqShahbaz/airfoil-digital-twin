@@ -10,6 +10,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from airfoil_dt.datasets.splits import load_splits, validate_splits
+from airfoil_dt.datasets.validation import (
+    GraphValidationConfig,
+    check_graph,
+    check_topology,
+    make_topology_reference,
+    split_case_ids,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -20,6 +27,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--edge-dim", type=int, default=4)
     parser.add_argument("--y-dim", type=int, default=4)
     parser.add_argument("--condition-dim", type=int, default=2)
+    parser.add_argument("--aoa-min", type=float, default=-4.0)
+    parser.add_argument("--aoa-max", type=float, default=16.0)
+    parser.add_argument("--re-min", type=float, default=3.0e6)
+    parser.add_argument("--re-max", type=float, default=9.0e6)
+    parser.add_argument("--target-abs-max", type=float, default=1.0e7)
+    parser.add_argument("--allow-topology-variation", action="store_true")
+    parser.add_argument("--allow-input-target-overlap", action="store_true")
     return parser.parse_args()
 
 
@@ -34,7 +48,7 @@ def main() -> int:
     if args.splits:
         splits = load_splits(args.splits)
         validate_splits(splits)
-        case_ids = [case_id for values in splits.values() for case_id in values]
+        case_ids = split_case_ids(splits)
         paths = [graph_dir / f"{case_id}.pt" for case_id in case_ids]
     else:
         paths = sorted(graph_dir.glob("*.pt"))
@@ -45,10 +59,32 @@ def main() -> int:
     if missing:
         raise SystemExit(f"missing graph files: {missing[:5]}")
 
+    config = GraphValidationConfig(
+        x_dim=args.x_dim,
+        edge_dim=args.edge_dim,
+        y_dim=args.y_dim,
+        condition_dim=args.condition_dim,
+        aoa_min=args.aoa_min,
+        aoa_max=args.aoa_max,
+        re_min=args.re_min,
+        re_max=args.re_max,
+        target_abs_max=args.target_abs_max,
+        check_consistent_topology=not args.allow_topology_variation,
+        check_no_input_target_overlap=not args.allow_input_target_overlap,
+    )
     errors: list[str] = []
+    topology_reference = None
     for path in paths:
         data = torch.load(path, weights_only=False)
-        errors.extend(_check_graph(path, data, args, torch))
+        graph_errors = check_graph(path, data, config, torch)
+        errors.extend(graph_errors)
+        if graph_errors:
+            continue
+        if config.check_consistent_topology:
+            if topology_reference is None:
+                topology_reference = make_topology_reference(path, data)
+            else:
+                errors.extend(check_topology(path, data, topology_reference, torch))
 
     if errors:
         for error in errors[:50]:
@@ -57,43 +93,9 @@ def main() -> int:
             print(f"... {len(errors) - 50} more errors")
         raise SystemExit(f"graph dataset check failed with {len(errors)} errors")
 
-    print(f"validated {len(paths)} graph files in {graph_dir}")
+    topology = "fixed topology" if config.check_consistent_topology else "topology variation allowed"
+    print(f"validated {len(paths)} graph files in {graph_dir} ({topology})")
     return 0
-
-
-def _check_graph(path: Path, data, args: argparse.Namespace, torch_module) -> list[str]:
-    errors: list[str] = []
-    required = ("x", "edge_index", "edge_attr", "y", "u")
-    for name in required:
-        if not hasattr(data, name):
-            errors.append(f"{path.name}: missing attribute {name}")
-    if errors:
-        return errors
-
-    if data.x.ndim != 2 or data.x.shape[1] != args.x_dim:
-        errors.append(f"{path.name}: expected x dim {args.x_dim}, got {tuple(data.x.shape)}")
-    if data.edge_attr.ndim != 2 or data.edge_attr.shape[1] != args.edge_dim:
-        errors.append(f"{path.name}: expected edge_attr dim {args.edge_dim}, got {tuple(data.edge_attr.shape)}")
-    if data.y.ndim != 2 or data.y.shape[1] != args.y_dim:
-        errors.append(f"{path.name}: expected y dim {args.y_dim}, got {tuple(data.y.shape)}")
-    if data.u.ndim != 2 or data.u.shape[1] != args.condition_dim:
-        errors.append(f"{path.name}: expected u dim {args.condition_dim}, got {tuple(data.u.shape)}")
-    if data.edge_index.ndim != 2 or data.edge_index.shape[0] != 2:
-        errors.append(f"{path.name}: expected edge_index shape (2, num_edges), got {tuple(data.edge_index.shape)}")
-    if data.edge_index.numel() == 0:
-        errors.append(f"{path.name}: graph has no edges")
-    if data.x.shape[0] != data.y.shape[0]:
-        errors.append(f"{path.name}: x/y node count mismatch {data.x.shape[0]} vs {data.y.shape[0]}")
-
-    for name in ("x", "edge_attr", "y", "u"):
-        value = getattr(data, name)
-        if not torch_module.isfinite(value).all():
-            errors.append(f"{path.name}: {name} contains NaN or Inf")
-    if data.edge_index.numel() and int(data.edge_index.max()) >= data.x.shape[0]:
-        errors.append(f"{path.name}: edge_index references node beyond x size")
-    if data.edge_index.numel() and int(data.edge_index.min()) < 0:
-        errors.append(f"{path.name}: edge_index contains negative node index")
-    return errors
 
 
 if __name__ == "__main__":

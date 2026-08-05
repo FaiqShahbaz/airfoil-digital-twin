@@ -154,6 +154,8 @@ The runnable CLI path now supports saved graph files through training and held-o
 - `compute_stats.py` computes normalization statistics from the training split only when `--splits` is supplied.
 - `train_experiment.py` trains a configured GNN and writes checkpoints/history.
 - `evaluate_experiment.py` evaluates a checkpoint on a held-out split and writes per-case and aggregate metrics.
+- `compare_experiments.py` aggregates evaluated model-family runs into a comparison CSV.
+- `create_graph_template.py` writes a deployable graph template for the digital-twin dashboard/runtime.
 
 ## GNN Command Flow
 
@@ -166,6 +168,9 @@ python scripts/check_graph_dataset.py --graph-dir data/processed/naca0012_l4_sa/
 python scripts/compute_stats.py --graph-dir data/processed/naca0012_l4_sa/graphs --splits data/splits/naca0012_l4_sa_splits.json
 python scripts/train_experiment.py --config configs/experiments/naca0012_gcn_smoke.yaml
 python scripts/evaluate_experiment.py --config configs/experiments/naca0012_gcn_smoke.yaml
+python scripts/compare_experiments.py naca0012_gcn_smoke
+python scripts/create_graph_template.py --input data/processed/naca0012_l4_sa/graphs/anchor_aoa_0.pt
+PYTHONPATH=src streamlit run dashboard/app.py
 ```
 
 The imported `.npz` manifest uses `source_path` entries relative to `data/raw/naca0012_l4_sa/manifest.csv`, so use that manifest directly unless paths are rewritten.
@@ -184,6 +189,7 @@ runs/<experiment_name>/
 └── evaluation/
     ├── test_case_metrics.csv
     └── test_metrics.json
+model_comparison.csv
 ```
 
 Experiment configs exist for:
@@ -216,6 +222,7 @@ naca0012_meshgraphnet_smoke.yaml
 
 - `docs/project_overview.md`
 - `docs/dataset_protocol.md`
+- `docs/naca0012_l4_sa_provenance.md`
 - `docs/model_comparison_protocol.md`
 - `docs/digital_twin_scope.md`
 - `AGENTS.md`
