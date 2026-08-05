@@ -1,0 +1,16 @@
+name: airfoil-dt
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy<2
+  - scipy
+  - matplotlib
+  - pyyaml
+  - pytest
+  - pytorch
+  - pip
+  - pip:
+      - torch-geometric
+      - streamlit

@@ -43,16 +43,17 @@ y         = [Ux, Uz, p, nuTilda]
 
 ## Verification Status
 
-Phase 1 verification on the local artifact bundle passed:
+Latest verification on the local artifact bundle passed:
 
 ```text
-Unit tests:                19 passed
+Unit tests:                38 passed
 Graph dataset validation:  100 graph files validated with fixed topology
+Runtime backend smoke:     (229376, 4) predicted field array
 ```
 
 The graph validation gate checks tensor shapes, finite values, edge-index bounds, split coverage, AoA/Re metadata bounds, broad target range sanity, exact input-target column overlap, and fixed mesh topology.
 
-The current shell may require resolving a macOS OpenMP runtime conflict if PyTorch is installed through mixed Conda/pip sources. Prefer running the project from a clean `airfoil-dt` environment with a consistent PyTorch installation.
+Use `environment.yml` for a reproducible `airfoil-dt` environment. Keep `numpy<2` with the current PyTorch stack.
 
 ## Known Provenance Caveat
 

@@ -13,6 +13,7 @@ Current scripts:
 - `evaluate_experiment.py`: evaluates a trained checkpoint on a held-out split and writes metrics.
 - `compare_experiments.py`: aggregates evaluated run metrics into a model-family comparison CSV.
 - `create_graph_template.py`: strips supervised targets from an exported graph to create a deployable digital-twin graph template.
+- `create_demo_npz_dataset.py`: creates a tiny synthetic NPZ dataset for fresh-clone software smoke tests only.
 
 Typical order after importing a compact `.npz` export bundle:
 
@@ -28,6 +29,8 @@ python scripts/create_graph_template.py --input data/processed/naca0012_l4_sa/gr
 ```
 
 Use the manifest from `data/raw/naca0012_l4_sa/manifest.csv` directly unless its `source_path` values are rewritten; the exported manifest uses paths relative to its own directory.
+
+For a fresh clone without real CFD artifacts, use `docs/quickstart.md` to generate synthetic demo artifacts first.
 
 Examples for harder evaluation splits:
 

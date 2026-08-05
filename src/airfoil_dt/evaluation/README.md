@@ -1,6 +1,6 @@
 # Evaluation Package
 
-`airfoil_dt.evaluation` will contain field metrics, force metrics, plots, and report generation.
+`airfoil_dt.evaluation` contains field metrics, force-coefficient comparison helpers, plotting placeholders, and report helpers.
 
 ## NACA0012 Metrics
 
@@ -8,7 +8,7 @@ Initial NACA0012 evaluation should include:
 
 - Normalized RMSE per target field.
 - Relative L2 per target field.
-- Spatial error plots for `Ux`, `Uz`, `p`, and `nuTilda`.
+- Spatial error plots for `Ux`, `Uz`, `p`, and `nuTilda` after figure/report tooling is finalized.
 - Derived `Cl`, `Cd`, and `Cm` errors after a validated force-reconstruction path exists.
 - Generalization-gap summaries across AoA/Re splits.
 

@@ -69,4 +69,4 @@ python3 postprocess_parametric_dataset.py --notes-dir ../../notes
 python3 export_ml_dataset.py
 ```
 
-The export script currently writes a compact manifest of usable cases. Field tensor export should be added after the first batch verifies storage, final fields, and QC behavior.
+The downstream ML workflow expects a compact manifest plus reduced `.npz` snapshots containing `cell_centers`, `owner`, `neighbour`, `U`, `p`, and `nuTilda`. Those artifacts are copied into ignored local paths under `data/raw/naca0012_l4_sa/` before running the graph export scripts documented in `docs/artifacts.md`.

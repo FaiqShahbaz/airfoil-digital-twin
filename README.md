@@ -19,7 +19,7 @@ This repository owns:
 - GNN model families and reusable training loops.
 - Field and force evaluation reports.
 - Paper-ready cross-problem model-family comparison protocols.
-- Digital-twin inference wrappers and later dashboard integration.
+- Digital-twin inference wrappers and Streamlit dashboard integration.
 - Lightweight CFD case templates, study scripts, reference notes, and export tooling under `cfd/naca0012/`.
 
 This repository does not track:
@@ -114,7 +114,7 @@ configs/
 ├── experiments/     # Model/training experiment configs
 └── digital_twin/    # Runtime surrogate configs
 cfd/naca0012/        # Lightweight CFD workflow, references, and exporters
-dashboard/           # Later Streamlit interface
+dashboard/           # Streamlit digital-twin interface
 data/                # Local/generated data placeholders; heavy contents ignored
 docs/                # Active project protocols
 scripts/             # Thin CLI wrappers
@@ -175,6 +175,8 @@ PYTHONPATH=src streamlit run dashboard/app.py
 
 The imported `.npz` manifest uses `source_path` entries relative to `data/raw/naca0012_l4_sa/manifest.csv`, so use that manifest directly unless paths are rewritten.
 
+For a fresh clone without real CFD artifacts, use the synthetic smoke-test path in `docs/quickstart.md`. The synthetic data are for software verification only and must not be used for scientific claims.
+
 Default outputs are written under:
 
 ```text
@@ -220,6 +222,8 @@ naca0012_meshgraphnet_smoke.yaml
 
 ## Important Docs
 
+- `docs/quickstart.md`
+- `docs/artifacts.md`
 - `docs/project_overview.md`
 - `docs/dataset_protocol.md`
 - `docs/naca0012_l4_sa_provenance.md`
@@ -229,12 +233,22 @@ naca0012_meshgraphnet_smoke.yaml
 
 ## Setup
 
-Install the package and current lightweight dependencies:
+Recommended Conda setup:
+
+```bash
+conda env create -f environment.yml
+conda activate airfoil-dt
+python -m pip install -e .
+```
+
+Alternatively, install the package and dependencies in a Python 3.11 environment:
 
 ```bash
 python -m pip install -e .
 python -m pip install -r requirements.txt
 ```
+
+Keep `numpy<2` with the current PyTorch stack. PyTorch builds compiled against NumPy 1.x can fail when used with NumPy 2.x.
 
 Run the environment check:
 
@@ -248,7 +262,7 @@ Run tests:
 python -m pytest
 ```
 
-Training requires an environment with `torch`, `torch-geometric`, `numpy`, and `pyyaml`. Dashboard dependencies such as VTK/PyVista, Streamlit, and Plotly are still deferred until the dashboard implementation phase.
+Training requires `torch`, `torch-geometric`, `numpy<2`, and `pyyaml`. The Streamlit dashboard dependency is included in `requirements.txt` and in the optional package extra `.[dashboard]`.
 
 ## Claim Boundary
 
