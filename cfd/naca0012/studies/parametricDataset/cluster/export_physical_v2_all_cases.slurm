@@ -10,8 +10,10 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-EXPORTER="${AIRFOIL_REPO_ROOT:?AIRFOIL_REPO_ROOT is required}/cfd/naca0012/studies/parametricDataset/export_ml_dataset.py"
+REPO_ROOT="${AIRFOIL_REPO_ROOT:?AIRFOIL_REPO_ROOT is required}"
+STUDY_CODE_DIR="$REPO_ROOT/cfd/naca0012/studies/parametricDataset"
+SCRIPT_DIR="$STUDY_CODE_DIR/cluster"
+EXPORTER="$STUDY_CODE_DIR/export_ml_dataset.py"
 STUDY_DIR="${AIRFOIL_CFD_STUDY:?AIRFOIL_CFD_STUDY is required}"
 ARTIFACT_ROOT="${AIRFOIL_ARTIFACT_ROOT:?AIRFOIL_ARTIFACT_ROOT is required}"
 DATASET_ROOT="$ARTIFACT_ROOT/naca0012_l4_sa_v2"
