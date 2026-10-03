@@ -202,6 +202,19 @@ awk -F, 'NR>1 {count[$10]++} END {for (key in count) print key, count[key]}' \
 The final command reports the `dataset_scope` column. Continue only if the
 counts sum to 100 and every non-certified row is `exploratory_review`.
 
+For the current all-100 workflow, submit the repository job script so the
+conversion does not run on the Slurm controller:
+
+```bash
+cd "$AIRFOIL_CFD_STUDY"
+sbatch --export=ALL \
+  "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/cluster/export_physical_v2_all_cases.slurm"
+```
+
+The job activates OpenFOAM for staging, switches to `naca_post` for NumPy
+export, refuses to overwrite an existing v2 export, and requires exactly 100
+snapshots plus 100 verification records before succeeding.
+
 Reconcile the newly written physical snapshots as a separate evidence pass.
 This checks the physical arrays and their verification summaries rather than
 assuming that certification of the earlier export transfers automatically:
