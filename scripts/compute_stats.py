@@ -47,11 +47,13 @@ def main() -> int:
 
     x_arrays = []
     y_arrays = []
+    edge_arrays = []
     for path in paths:
         graph = torch.load(path, weights_only=False)
         x_arrays.append(graph.x.detach().cpu().numpy())
         y_arrays.append(graph.y.detach().cpu().numpy())
-    stats = compute_stats(x_arrays, y_arrays)
+        edge_arrays.append(graph.edge_attr.detach().cpu().numpy())
+    stats = compute_stats(x_arrays, y_arrays, edge_arrays)
     stats.to_json(args.out)
     print(f"wrote {args.out}")
     return 0

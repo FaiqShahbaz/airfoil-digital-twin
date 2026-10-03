@@ -63,10 +63,34 @@ source ~/Cluster_Project/Software/miniconda/bin/activate naca_post
 python3 postprocess_parametric_dataset.py --notes-dir ../../notes
 ```
 
+The Phase 2 postprocessor writes `qc_version=phase2-v1`; a missing/nonfinite force or y+ diagnostic, excessive `Cl`/`Cd`/`Cm` drift, or missing reconstructed final fields prevents automatic `usable` status. Reconcile the inventory, QC summary, export manifest, source case, and verification JSON using `reconcile_provenance.py`. High-AoA/Re cases additionally require documented physical review. See `docs/naca0012_phase2_reconciliation.md` from the repository root for exact commands, thresholds, and the current open-gate status.
+
 ## Export Manifest
 
 ```bash
 python3 export_ml_dataset.py
 ```
+
+For the versioned physical-geometry graph contract, stage ASCII cases and
+generate cell centers/volumes in the native OpenFOAM environment:
+
+```bash
+python3 export_ml_dataset.py \
+  --summary results/parametric_summary.csv \
+  --provenance results/phase2_provenance.csv \
+  --schema-version openfoam-physical-v2 \
+  --outdir exports/ml_npz_v2 \
+  --ascii-workdir exports/ascii_cases_v2 \
+  --prepare-ascii \
+  --from-ascii
+```
+
+The v2 export includes positive cell volumes, non-empty physical boundary
+faces, adjacent-cell wall/farfield flags, face centers, oriented area vectors,
+and patch IDs. ASCII conversion explicitly includes `constant/polyMesh`.
+Export failure is intentional if these physical features cannot be established.
+Run `reconcile_provenance.py` again against the v2 manifest after export; this
+second pass verifies the physical arrays, schema marker, and mesh hash in the
+new snapshots.
 
 The downstream ML workflow expects a compact manifest plus reduced `.npz` snapshots containing `cell_centers`, `owner`, `neighbour`, `U`, `p`, and `nuTilda`. Those artifacts are copied into ignored local paths under `data/raw/naca0012_l4_sa/` before running the graph export scripts documented in `docs/artifacts.md`.

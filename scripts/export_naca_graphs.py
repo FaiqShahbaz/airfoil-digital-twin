@@ -19,6 +19,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--outdir", default="data/processed/naca0012_l4_sa/graphs")
     parser.add_argument("--input-format", choices=["openfoam", "npz"], default="openfoam")
     parser.add_argument("--final-time", default="10000")
+    parser.add_argument("--schema-version", choices=["v1", "v2"], default="v1")
+    parser.add_argument("--chord", type=float, default=1.0)
     return parser.parse_args()
 
 
@@ -36,7 +38,9 @@ def main() -> int:
             snapshot = load_npz_snapshot(case.case_dir, case)
         else:
             snapshot = load_openfoam_snapshot(case, final_time=args.final_time)
-        graph = build_graph(snapshot)
+        graph = build_graph(
+            snapshot, schema_version=args.schema_version, chord=args.chord
+        )
         torch.save(graph, outdir / f"{case.case_id}.pt")
         print(f"wrote {outdir / f'{case.case_id}.pt'}")
     return 0

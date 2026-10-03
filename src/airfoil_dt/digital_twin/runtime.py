@@ -110,6 +110,10 @@ class AirfoilDigitalTwin:
         graph.x = (graph.x.detach().cpu() - x_mean) / (x_std + 1e-8)
         graph.edge_index = graph.edge_index.detach().cpu()
         graph.edge_attr = graph.edge_attr.detach().cpu()
+        if self.stats.edge_mean is not None and self.stats.edge_std is not None:
+            edge_mean = self.torch.tensor(self.stats.edge_mean, dtype=graph.edge_attr.dtype)
+            edge_std = self.torch.tensor(self.stats.edge_std, dtype=graph.edge_attr.dtype)
+            graph.edge_attr = (graph.edge_attr - edge_mean) / (edge_std + 1e-8)
         graph.u = self.torch.tensor(
             [[normalize_reynolds(float(reynolds)), normalize_aoa(float(aoa_deg))]],
             dtype=graph.x.dtype,

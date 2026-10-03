@@ -14,7 +14,7 @@ Turbulence model:  Spalart-Allmaras
 AoA range:         -4 to 16 deg
 Re range:          3e6 to 9e6
 Production time:   10000 SIMPLE iterations
-Local cases:       100 usable manifest rows
+Local cases:       100 rows labeled usable by the export manifest; Phase 2 QC remains open
 ```
 
 ## Local Artifact Paths
@@ -43,15 +43,17 @@ y         = [Ux, Uz, p, nuTilda]
 
 ## Verification Status
 
-Latest verification on the local artifact bundle passed:
+Earlier software-level checks on the local artifact bundle recorded:
 
 ```text
-Unit tests:                38 passed
+Unit tests:                38 passed at that earlier check
 Graph dataset validation:  100 graph files validated with fixed topology
 Runtime backend smoke:     (229376, 4) predicted field array
 ```
 
 The graph validation gate checks tensor shapes, finite values, edge-index bounds, split coverage, AoA/Re metadata bounds, broad target range sanity, exact input-target column overlap, and fixed mesh topology.
+
+These checks are not production-case certification. The current [Phase 2 reconciliation](naca0012_phase2_reconciliation.md) reports 100 `review` rows pending independent source-run and updated QC evidence. The per-case [provenance CSV](naca0012_phase2_provenance.csv) records what was checked and what remains unavailable.
 
 Use `environment.yml` for a reproducible `airfoil-dt` environment. Keep `numpy<2` with the current PyTorch stack.
 

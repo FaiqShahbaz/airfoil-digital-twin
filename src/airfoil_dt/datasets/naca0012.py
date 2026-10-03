@@ -51,4 +51,12 @@ class NACA0012GraphDataset:
         y_std = torch.tensor(self.stats.y_std, dtype=data.y.dtype, device=data.y.device)
         data.x = (data.x - x_mean) / (x_std + 1e-8)
         data.y = (data.y - y_mean) / (y_std + 1e-8)
+        if self.stats.edge_mean is not None and self.stats.edge_std is not None:
+            edge_mean = torch.tensor(
+                self.stats.edge_mean, dtype=data.edge_attr.dtype, device=data.edge_attr.device
+            )
+            edge_std = torch.tensor(
+                self.stats.edge_std, dtype=data.edge_attr.dtype, device=data.edge_attr.device
+            )
+            data.edge_attr = (data.edge_attr - edge_mean) / (edge_std + 1e-8)
         return data

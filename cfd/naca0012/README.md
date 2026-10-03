@@ -547,35 +547,37 @@ For GNN use, this is important: shorter runs risk teaching the network solver-tr
 
 The cluster workflow uses native Conda OpenFOAM, not Docker or Apptainer.
 
-Cluster project root:
+Define site-specific locations before using the examples:
 
-```text
-/home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012
+```bash
+export AIRFOIL_CLUSTER_ROOT=/path/to/cluster/naca0012
+export AIRFOIL_LOCAL_ROOT=/path/to/airfoil-digital-twin
+export AIRFOIL_CLUSTER_LOGIN=user@cluster.example
 ```
 
 OpenFOAM run environment:
 
 ```bash
-source ~/Cluster_Project/Software/miniconda/bin/activate of_parallel
+source /path/to/miniconda/bin/activate of_parallel
 ```
 
 Postprocessing environment:
 
 ```bash
-source ~/Cluster_Project/Software/miniconda/bin/activate naca_post
+source /path/to/miniconda/bin/activate naca_post
 ```
 
 Typical Slurm pattern:
 
 ```bash
-cd /home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/<study>
+cd "$AIRFOIL_CLUSTER_ROOT/studies/<study>"
 bash cluster/<submit_script>.sh
 ```
 
 Monitor jobs:
 
 ```bash
-squeue -u gulzar
+squeue -u "$USER"
 ```
 
 Check statuses:
@@ -587,17 +589,17 @@ for f in runs/*/run_status_cluster.txt; do echo "$f: $(cat "$f")"; done
 Copy results back from laptop:
 
 ```bash
-scp -r gulzar@165.101.126.131:/home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/aoaVariation/results \
-  /Users/faiq/Projects/airfoil-digital-twin/cfd/naca0012/studies/aoaVariation/
+scp -r "${AIRFOIL_CLUSTER_LOGIN}:${AIRFOIL_CLUSTER_ROOT}/studies/aoaVariation/results" \
+  "$AIRFOIL_LOCAL_ROOT/cfd/naca0012/studies/aoaVariation/"
 
-scp -r gulzar@165.101.126.131:/home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/turbulenceModels/results \
-  /Users/faiq/Projects/airfoil-digital-twin/cfd/naca0012/studies/turbulenceModels/
+scp -r "${AIRFOIL_CLUSTER_LOGIN}:${AIRFOIL_CLUSTER_ROOT}/studies/turbulenceModels/results" \
+  "$AIRFOIL_LOCAL_ROOT/cfd/naca0012/studies/turbulenceModels/"
 
-scp -r gulzar@165.101.126.131:/home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/meshIndependence/results \
-  /Users/faiq/Projects/airfoil-digital-twin/cfd/naca0012/studies/meshIndependence/
+scp -r "${AIRFOIL_CLUSTER_LOGIN}:${AIRFOIL_CLUSTER_ROOT}/studies/meshIndependence/results" \
+  "$AIRFOIL_LOCAL_ROOT/cfd/naca0012/studies/meshIndependence/"
 
-scp -r gulzar@165.101.126.131:/home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/notes \
-  /Users/faiq/Projects/airfoil-digital-twin/cfd/naca0012/
+scp -r "${AIRFOIL_CLUSTER_LOGIN}:${AIRFOIL_CLUSTER_ROOT}/notes" \
+  "$AIRFOIL_LOCAL_ROOT/cfd/naca0012/"
 ```
 
 ## Disk And Storage Policy
@@ -729,7 +731,7 @@ For Reynolds number, log-uniform LHS is preferred because relative Reynolds chan
 Copy the study folder to the cluster after local edits. On the cluster, generate or reuse the master inventory:
 
 ```bash
-cd /home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/parametricDataset
+cd "$AIRFOIL_CLUSTER_ROOT/studies/parametricDataset"
 python3 makeParametricCases.py --target-total 100 --seed 20260618
 ```
 
@@ -748,10 +750,10 @@ BATCH_ID=batch_001 NTASKS=24 TIME_DEFAULT=12:00:00 bash cluster/submit_case_batc
 After the first few cases complete, check status and disk usage:
 
 ```bash
-squeue -u gulzar
+squeue -u "$USER"
 for c in runs/lhs_*; do test -f "$c/run_status_cluster.txt" && echo "$c: $(cat "$c/run_status_cluster.txt")"; done
 du -sh runs/lhs_*
-df -h /home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012
+df -h "$AIRFOIL_CLUSTER_ROOT"
 ```
 
 If the first batch is healthy, create and submit later batches:
@@ -802,11 +804,11 @@ Delete or avoid retaining:
 
 The studies completed so far support the following decisions:
 
-1. `Family II L4` is the production mesh for validation and GNN-quality field generation.
-2. `SpalartAllmaras` is the production turbulence model because it is traceable to NASA TMR SA references.
-3. The L4 SA setup gives validation-grade agreement at `AoA=10`, with `Cl` within about `1-3%` of primary references and `Cd` within about `4-8%` depending on reference.
-4. AoA variation from `0` to `15` degrees completed cleanly and provides reusable validation anchors.
-5. Turbulence-model comparison completed cleanly; SST is useful for comparison but SA remains the baseline.
+1. `Family II L4` is the selected production-mesh candidate for the fixed-mesh study; its retained evidence must pass the provenance gate before ML use.
+2. `SpalartAllmaras` is the intended baseline because the setup is traceable to NASA TMR SA references.
+3. Existing comparison artifacts report close L4 SA agreement at `AoA=10`, but those percentages are not a current scientific claim until source evidence is reconciled under `docs/naca0012_phase2_reconciliation.md`.
+4. Local AoA-variation artifacts provide candidate validation anchors; their source evidence is currently under review.
+5. Local turbulence-model comparison artifacts support keeping SST as a comparison and SA as the intended baseline, subject to the same evidence gate.
 6. Convergence-depth rejected `3000`, `5000`, `7000`, and `8000` as global production cutoffs. Use `10000` iterations for the first parametric/GNN dataset.
 7. Future parametric dataset generation should use L4 + SA, AoA/Re variation, a master LHS inventory, final-snapshot-only storage, and quality gates that mark suspect cases as `REVIEW`.
 
@@ -815,23 +817,23 @@ The studies completed so far support the following decisions:
 Postprocess all completed studies on the cluster:
 
 ```bash
-cd /home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/aoaVariation
-source ~/Cluster_Project/Software/miniconda/bin/activate naca_post
+cd "$AIRFOIL_CLUSTER_ROOT/studies/aoaVariation"
+source /path/to/miniconda/bin/activate naca_post
 python3 postprocess_aoa_variation.py --notes-dir ../../notes --refdir ../../references
 
-cd /home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/turbulenceModels
-source ~/Cluster_Project/Software/miniconda/bin/activate naca_post
+cd "$AIRFOIL_CLUSTER_ROOT/studies/turbulenceModels"
+source /path/to/miniconda/bin/activate naca_post
 python3 postprocess_turbulence_models.py --notes-dir ../../notes --refdir ../../references
 
-cd /home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/meshIndependence
-source ~/Cluster_Project/Software/miniconda/bin/activate naca_post
+cd "$AIRFOIL_CLUSTER_ROOT/studies/meshIndependence"
+source /path/to/miniconda/bin/activate naca_post
 python3 postprocess_mesh_independence.py --notes-dir ../../notes --refdir ../../references
 ```
 
 Run convergence-depth cases:
 
 ```bash
-cd /home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/convergenceDepth
+cd "$AIRFOIL_CLUSTER_ROOT/studies/convergenceDepth"
 python3 makeConvergenceCases.py
 CASE_LIST=cd_000,cd_001,cd_002 NTASKS=24 TIME_DEFAULT=12:00:00 bash cluster/submit_case_chain.sh
 ```
@@ -839,7 +841,7 @@ CASE_LIST=cd_000,cd_001,cd_002 NTASKS=24 TIME_DEFAULT=12:00:00 bash cluster/subm
 Postprocess convergence-depth:
 
 ```bash
-cd /home/gulzar/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/convergenceDepth
-source ~/Cluster_Project/Software/miniconda/bin/activate naca_post
+cd "$AIRFOIL_CLUSTER_ROOT/studies/convergenceDepth"
+source /path/to/miniconda/bin/activate naca_post
 python3 postprocess_convergence_depth.py --notes-dir ../../notes
 ```

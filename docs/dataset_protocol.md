@@ -21,6 +21,24 @@ y         = [Ux_norm, Uz_norm, p_norm, nuTilda_norm]
 
 Graph edges for NACA0012 must use OpenFOAM internal-face `owner`/`neighbour` finite-volume connectivity. KNN graphs are not valid for this dataset contract unless explicitly documented as a separate ablation.
 
+Version 2 is the required contract for new scientific runs:
+
+```text
+x         = [x/c, z/c, r/c, log10(V/c^3), wall_adjacent, farfield_adjacent]
+edge_attr = [dx/c, dz/c, dist/c, sin(angle), cos(angle)]
+u         = [log-Re normalized, AoA normalized]
+y         = [Ux, Uz, kinematic p, nuTilda] (normalized from training cases)
+diagnostic mesh tensors = cell volumes plus boundary-face owners, centers,
+                          oriented area vectors, and patch IDs
+```
+
+The v2 exporter excludes OpenFOAM `empty` front/back patches from physical
+boundary faces and fails if it cannot identify both the airfoil wall and
+farfield. Edge normalization, like node/target normalization, is fitted on the
+training partition only. A production L4 export must also contain 229,376
+cells, one consistent recorded mesh hash, and a successful post-export
+physical-v2 provenance reconciliation.
+
 ## No-Leakage Rule
 
 Deployable model inputs must not include CFD solution outputs. Disallowed runtime inputs include:
@@ -36,7 +54,9 @@ Those quantities may be used as targets, validation labels, or diagnostics.
 
 ## Normalization
 
-Normalization statistics must be computed from training cases only. Validation and test cases must use the training statistics without recomputing or leaking information.
+Node, edge, and target normalization statistics must be computed from training
+cases only. Validation and test cases must use those statistics without
+recomputing or leaking information.
 
 ## Splits
 

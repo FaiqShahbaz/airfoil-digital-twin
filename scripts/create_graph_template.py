@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import numpy as np  # Initialize NumPy before torch in mixed-runtime environments.
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -15,6 +17,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    _ = np.__version__
     args = parse_args()
     try:
         import torch

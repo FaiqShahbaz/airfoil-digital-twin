@@ -2,6 +2,21 @@
 
 This repository contains the CFD reference workflow, ML/GNN training pipeline, and digital-twin implementation layer for the NACA0012 airfoil surrogate study.
 
+The current runtime is a static, open-loop field surrogate and an early
+digital-twin component. It is not yet an observation-updated or scientifically
+validated operational twin. The current audit and stop conditions are recorded
+in `docs/repository_audit_2026-09-29.md`.
+
+## Start Here
+
+- Cluster colleague: `COLLEAGUE_INSTRUCTIONS.md`
+- New contributors: `docs/repository_structure.md`
+- Current completion state and remaining gates: `docs/project_status.md`
+- Local software demonstration: `docs/quickstart.md`
+- Colleague/cluster execution: `docs/cluster_handoff.md`
+- Scientific protocol and claim boundaries: `docs/naca0012_study_protocol.md`
+- Contribution and placement rules: `CONTRIBUTING.md`
+
 The lightweight, source-controlled CFD workflow lives in:
 
 ```text
@@ -55,6 +70,12 @@ y         = [Ux_norm, Uz_norm, p_norm, nuTilda_norm]
 ```
 
 `nuTilda` is a supervised target for the Spalart-Allmaras model. It must not be used as a runtime input feature.
+
+The versioned physical-geometry contract for new cluster exports is
+`configs/datasets/naca0012_l4_sa_v2.yaml`. It requires real wall/farfield
+mapping, cell volumes, boundary-face centers/area vectors, chord-scaled edge
+geometry, and train-only edge normalization. It does not overwrite or silently
+reinterpret the existing v1 graphs.
 
 ## No-Leakage Rule
 
@@ -140,12 +161,16 @@ src/airfoil_dt/datasets/
 ├── normalization.py     # Training-only normalization stats
 ├── splits.py            # Train/validation/test split utilities
 └── naca0012.py          # Lazy dataset for saved .pt graph files with runtime normalization
-src/airfoil_dt/models/   # GCN, GAT, GraphSAGE, GIN, MPNN, Graph U-Net, MeshGraphNet, model factory
+src/airfoil_dt/models/   # Node MLP baseline, GCN, GAT, GraphSAGE, GIN, MPNN, Graph U-Net, MeshGraphNet
 src/airfoil_dt/training/ # Generic supervised losses, scheduler, trainer utilities
 src/airfoil_dt/evaluation/ # Field metrics, coefficient helpers, reports
 ```
 
-The raw field reader is intentionally explicit: reduced `.npz` exports are supported now for testing, while direct raw-case parsing will be finalized after the completed CFD batch export format is confirmed.
+Raw OpenFOAM parsing is intentionally owned by the CFD-side versioned
+exporter. The ML package accepts validated `.npz` snapshots and checks their
+case metadata, schema, mesh hash, and required physical-v2 arrays before graph
+construction; it does not silently parse production cases through a second
+path.
 
 The runnable CLI path now supports saved graph files through training and held-out evaluation:
 
@@ -206,29 +231,43 @@ naca0012_mpnn.yaml
 naca0012_graph_unet.yaml
 naca0012_meshgraphnet.yaml
 naca0012_meshgraphnet_smoke.yaml
+naca0012_mlp_v2.yaml
+naca0012_gcn_v2.yaml
+naca0012_meshgraphnet_v2.yaml
+naca0012_meshgraphnet_v2_smoke.yaml
 ```
 
 ## Development Gates
 
-1. Confirm completed CFD cases and final exported fields from `cfd/naca0012/studies/parametricDataset`.
-2. Export reduced `.npz` field snapshots with `cell_centers`, `owner`, `neighbour`, `U`, `p`, and `nuTilda`.
-3. Export PyTorch Geometric graphs and validate tensor shapes, metadata, connectivity, and no NaN/Inf values.
+1. Reconcile every completed CFD case, QC summary, manual high-risk review, and existing export before selecting cases.
+2. Export physical-v2 `.npz` snapshots with fields, cell volumes, boundary geometry, schema metadata, and mesh hashes; reconcile the new export again.
+3. Export PyTorch Geometric graphs and pass the L4 node-count, mesh-hash, topology, boundary, geometry, metadata, and finite-value gates.
 4. Build AoA/Re-aware train/validation/test splits.
 5. Compute normalization statistics from training cases only.
 6. Run a two-epoch smoke training job in the GNN environment.
 7. Evaluate the smoke checkpoint on held-out graphs.
 8. Train the full model-family comparison.
-9. Add digital-twin inference wrappers after a trained model can load and infer reliably.
+9. Create a target-free graph template and validate finite digital-twin runtime inference without CFD output fields as inputs.
+
+The exact colleague/cluster sequence is in `docs/cluster_handoff.md`.
 
 ## Important Docs
 
+- `docs/repository_structure.md`
+- `docs/project_status.md`
 - `docs/quickstart.md`
 - `docs/artifacts.md`
 - `docs/project_overview.md`
 - `docs/dataset_protocol.md`
 - `docs/naca0012_l4_sa_provenance.md`
+- `docs/naca0012_phase2_reconciliation.md`
+- `docs/pretraining_audit.md`
+- `docs/naca0012_study_protocol.md`
 - `docs/model_comparison_protocol.md`
 - `docs/digital_twin_scope.md`
+- `docs/repository_audit_2026-09-29.md`
+- `docs/m10_training.md`
+- `docs/cluster_handoff.md`
 - `AGENTS.md`
 
 ## Setup

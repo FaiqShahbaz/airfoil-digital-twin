@@ -1,13 +1,15 @@
 # Mesh-Independence Cluster Workflow
 
-These Slurm scripts run NACA 0012 Family II mesh cases on a Conda-installed OpenFOAM environment. They are path-independent: the project can live under `~/Cluster_Project/Shared_Data/FAIQ/naca0012`, a local laptop path, or another checkout path.
+These Slurm scripts run NACA 0012 Family II mesh cases on a Conda-installed OpenFOAM environment. They are path-independent and can run from any checkout location.
 
 ## Expected Cluster Location
 
-Recommended location on the cluster:
+Choose site-specific locations and login details:
 
 ```bash
-~/Cluster_Project/Shared_Data/FAIQ/naca0012
+export AIRFOIL_CLUSTER_ROOT=/path/to/cluster/naca0012
+export AIRFOIL_LOCAL_ROOT=/path/to/airfoil-digital-twin
+export AIRFOIL_CLUSTER_LOGIN=user@cluster.example
 ```
 
 The scripts do not hardcode this path. They resolve `PROJECT_ROOT`, `STUDY_DIR`, and case paths from the location of the Slurm script.
@@ -17,7 +19,7 @@ The scripts do not hardcode this path. They resolve `PROJECT_ROOT`, `STUDY_DIR`,
 `cluster_env.sh` defaults to:
 
 ```bash
-source ~/Cluster_Project/Software/miniconda/bin/activate of_parallel
+source /path/to/miniconda/bin/activate of_parallel
 export WM_PROJECT_DIR="$CONDA_PREFIX"
 export FOAM_MPI=mpich-3.3
 export WM_MPLIB=MPICH
@@ -35,7 +37,7 @@ sbatch --export=ALL,LEVEL=7,CONDA_ENV=my_of_env cluster/submit_single_mesh.slurm
 From the mesh study directory:
 
 ```bash
-cd ~/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/meshIndependence
+cd "$AIRFOIL_CLUSTER_ROOT/studies/meshIndependence"
 bash makeMeshFolders.sh --levels 1,2,3,4,5,6,7
 ```
 
@@ -112,14 +114,14 @@ rsync -avh --progress \
   --exclude '.DS_Store' \
   --exclude '__pycache__' \
   --exclude '*.pyc' \
-  /Users/faiq/Projects/airfoil-digital-twin/cfd/naca0012/ \
-  gulzar@slurm-controller:~/Cluster_Project/Shared_Data/FAIQ/naca0012/
+  "$AIRFOIL_LOCAL_ROOT/cfd/naca0012/" \
+  "${AIRFOIL_CLUSTER_LOGIN}:${AIRFOIL_CLUSTER_ROOT}/"
 ```
 
 Pull cluster outputs back with:
 
 ```bash
 rsync -avh --progress \
-  gulzar@slurm-controller:~/Cluster_Project/Shared_Data/FAIQ/naca0012/studies/meshIndependence/runs/ \
-  /Users/faiq/Projects/airfoil-digital-twin/cfd/naca0012/studies/meshIndependence/runs/
+  "${AIRFOIL_CLUSTER_LOGIN}:${AIRFOIL_CLUSTER_ROOT}/studies/meshIndependence/runs/" \
+  "$AIRFOIL_LOCAL_ROOT/cfd/naca0012/studies/meshIndependence/runs/"
 ```

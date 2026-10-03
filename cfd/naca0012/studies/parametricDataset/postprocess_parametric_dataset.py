@@ -22,6 +22,7 @@ from matplotlib.ticker import AutoMinorLocator
 
 
 WINDOW = 500
+QC_VERSION = "phase2-v1"
 
 
 @dataclass
@@ -46,6 +47,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-final-time", type=float, default=10000.0)
     parser.add_argument("--cl-drift", type=float, default=2.0)
     parser.add_argument("--cd-drift", type=float, default=5.0)
+    parser.add_argument("--cm-drift", type=float, default=5.0)
+    parser.add_argument("--cm-near-zero", type=float, default=0.002, help="Use absolute Cm drift below this mean magnitude")
+    parser.add_argument("--cm-absolute-drift", type=float, default=0.0001)
+    parser.add_argument("--max-yplus", type=float, default=1.0, help="Review SA cases with wall y+ at or above this value")
     return parser.parse_args()
 
 
@@ -119,12 +124,16 @@ def parse_dat_table(path: Path) -> Dict[str, np.ndarray]:
                 continue
             try:
                 rows.append([float(part) for part in re.split(r"\s+", line) if part])
-            except ValueError:
-                continue
+            except ValueError as exc:
+                raise ValueError(f"Invalid coefficient row in {path}: {line}") from exc
     if cols is None or not rows:
         raise ValueError(f"Could not parse table: {path}")
+    if any(len(row) != len(cols) for row in rows):
+        raise ValueError(f"Inconsistent coefficient column count: {path}")
     arr = np.asarray(rows, dtype=float)
-    return {col: arr[:, i] for i, col in enumerate(cols) if i < arr.shape[1]}
+    if not np.isfinite(arr).all():
+        raise ValueError(f"Nonfinite coefficient values: {path}")
+    return {col: arr[:, i] for i, col in enumerate(cols)}
 
 
 def parse_yplus(path: Path) -> Dict[str, float]:
@@ -141,7 +150,7 @@ def parse_yplus(path: Path) -> Dict[str, float]:
 
 
 def window_stats(values: Optional[np.ndarray], window: int) -> Tuple[float, float, float, float]:
-    if values is None or len(values) == 0:
+    if values is None or len(values) < 2 or window < 2 or not np.isfinite(values).all():
         return math.nan, math.nan, math.nan, math.nan
     tail = np.asarray(values[-min(window, len(values)):], dtype=float)
     final = float(tail[-1])
@@ -170,8 +179,14 @@ def analyze_case(row: Dict[str, str], args: argparse.Namespace) -> CaseData:
         case.warnings.append(str(exc))
         return case
     time = case.coeff.get("Time")
-    if time is None or len(time) == 0:
-        case.status = "missing_forces"
+    required = ("Time", "Cl", "Cd", "CmPitch")
+    if any(key not in case.coeff or len(case.coeff[key]) < max(args.window, 2) for key in required):
+        case.status = "review"
+        case.warnings.append("missing or insufficient Time/Cl/Cd/CmPitch force history for QC window")
+        return case
+    if not np.all(np.diff(time) > 0):
+        case.status = "review"
+        case.warnings.append("force history time is not strictly increasing")
         return case
     case.summary["final_time"] = float(time[-1])
     for src, prefix in (("Cl", "Cl"), ("Cd", "Cd"), ("CmPitch", "Cm")):
@@ -180,19 +195,40 @@ def analyze_case(row: Dict[str, str], args: argparse.Namespace) -> CaseData:
         case.summary[f"{prefix}_mean"] = mean
         case.summary[f"{prefix}_std"] = std
         case.summary[f"{prefix}_drift_pct"] = drift
+    cm_values = case.coeff["CmPitch"][-min(args.window, len(time)):]
+    case.summary["Cm_drift_abs"] = float(abs(cm_values[-1] - cm_values[0]))
     yplus_file = find_yplus_file(case.case_dir)
     if yplus_file:
         yplus = parse_yplus(yplus_file)
         for key, value in yplus.items():
             case.summary[f"yplus_{key}"] = value
     if not case.solver_end or case.summary["final_time"] < args.min_final_time:
-        case.status = "review"
         case.warnings.append("solver did not reach expected final time")
-    elif abs(case.summary.get("Cl_drift_pct", math.nan)) > args.cl_drift or abs(case.summary.get("Cd_drift_pct", math.nan)) > args.cd_drift:
-        case.status = "review"
-        case.warnings.append("force drift exceeds threshold")
-    else:
-        case.status = "usable"
+    final_dir = case.case_dir / str(int(args.min_final_time))
+    missing_fields = [name for name in ("U", "p", "nuTilda") if not (final_dir / name).is_file()]
+    if missing_fields:
+        case.warnings.append(f"missing final reconstructed fields in {final_dir}: {', '.join(missing_fields)}")
+    if any(not math.isfinite(case.summary[f"{key}_mean"]) for key in ("Cl", "Cd", "Cm")):
+        case.warnings.append("nonfinite or insufficient force statistics")
+    for key, limit in (("Cl", args.cl_drift), ("Cd", args.cd_drift)):
+        value = case.summary[f"{key}_drift_pct"]
+        if not math.isfinite(value) or abs(value) > limit:
+            case.warnings.append(f"{key} drift unavailable or exceeds {limit}%")
+    cm_mean = case.summary["Cm_mean"]
+    cm_drift = case.summary["Cm_drift_pct"]
+    if abs(cm_mean) < args.cm_near_zero:
+        if not math.isfinite(case.summary["Cm_drift_abs"]) or case.summary["Cm_drift_abs"] > args.cm_absolute_drift:
+            case.warnings.append(f"near-zero Cm absolute drift exceeds {args.cm_absolute_drift:g}")
+    elif not math.isfinite(cm_drift) or abs(cm_drift) > args.cm_drift:
+        case.warnings.append(f"Cm drift unavailable or exceeds {args.cm_drift}%")
+    yplus_max = case.summary.get("yplus_max", math.nan)
+    if not math.isfinite(yplus_max) or yplus_max < 0:
+        case.warnings.append("missing or invalid final y+ diagnostic")
+    elif not math.isfinite(case.summary.get("yplus_time", math.nan)) or case.summary["yplus_time"] < args.min_final_time:
+        case.warnings.append("final y+ diagnostic does not reach expected time")
+    elif yplus_max >= args.max_yplus:
+        case.warnings.append(f"max wall y+ is at or above {args.max_yplus:g}")
+    case.status = "review" if case.warnings else "usable"
     return case
 
 
@@ -200,8 +236,8 @@ def write_summary(cases: Sequence[CaseData], outdir: Path) -> Path:
     path = outdir / "parametric_summary.csv"
     fields = [
         "case_id", "batch_id", "source_study", "source_path", "aoa_deg", "re", "nu", "role", "include_in_dataset",
-        "status", "cluster_status", "solver_log_end", "final_time",
-        "Cl_mean", "Cd_mean", "Cm_mean", "Cl_drift_pct", "Cd_drift_pct", "Cm_drift_pct",
+        "status", "qc_version", "cluster_status", "solver_log_end", "final_time",
+        "Cl_mean", "Cd_mean", "Cm_mean", "Cl_drift_pct", "Cd_drift_pct", "Cm_drift_pct", "Cm_drift_abs",
         "yplus_min", "yplus_max", "yplus_avg", "warnings",
     ]
     with path.open("w", newline="") as handle:
@@ -209,7 +245,7 @@ def write_summary(cases: Sequence[CaseData], outdir: Path) -> Path:
         writer.writeheader()
         for case in cases:
             row = {key: case.row.get(key, "") for key in fields}
-            row.update({"status": case.status, "cluster_status": case.cluster_status, "solver_log_end": case.solver_end})
+            row.update({"status": case.status, "qc_version": QC_VERSION, "cluster_status": case.cluster_status, "solver_log_end": case.solver_end})
             for key in fields:
                 if key in case.summary:
                     row[key] = case.summary[key]

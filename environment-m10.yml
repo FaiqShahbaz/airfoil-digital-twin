@@ -1,0 +1,15 @@
+name: airfoil-dt-m10
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy<2
+  - scipy
+  - matplotlib
+  - pyyaml
+  - pytest
+  - pip
+
+# Install the Maxwell-compatible PyTorch wheel and this package only after
+# creating this base environment. See docs/cluster_handoff.md; intentionally
+# do not let Conda select a current CUDA build automatically.

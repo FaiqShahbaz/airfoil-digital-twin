@@ -39,7 +39,14 @@ def main() -> int:
         import torch
     except ImportError as exc:
         raise SystemExit("torch is required for evaluation") from exc
-    from airfoil_dt.evaluation.field_metrics import relative_l2_per_field, rmse_per_field
+    from airfoil_dt.evaluation.field_metrics import (
+        mae_per_field,
+        masked_rmse_per_field,
+        max_abs_error_per_field,
+        relative_l2_per_field,
+        rmse_per_field,
+        weighted_rmse_per_field,
+    )
     from airfoil_dt.evaluation.reports import write_metrics_csv
     from airfoil_dt.models import build_model
 
@@ -73,8 +80,12 @@ def main() -> int:
         for data in dataset:
             data = data.to(device)
             batch = torch.zeros(data.x.size(0), dtype=torch.long, device=device)
+            if device.type == "cuda":
+                torch.cuda.synchronize(device)
             start = time.perf_counter()
             pred_norm = model(data.x, data.edge_index, data.edge_attr, batch, data.u)
+            if device.type == "cuda":
+                torch.cuda.synchronize(device)
             inference_time_s = time.perf_counter() - start
             target_norm = data.y
             pred_physical = pred_norm * (y_std + 1e-8) + y_mean
@@ -87,6 +98,10 @@ def main() -> int:
                 target_physical,
                 rmse_per_field,
                 relative_l2_per_field,
+                mae_per_field,
+                max_abs_error_per_field,
+                weighted_rmse_per_field,
+                masked_rmse_per_field,
             )
             row["inference_time_s"] = inference_time_s
             rows.append(row)
@@ -164,6 +179,10 @@ def _case_metric_row(
     target_physical: Any,
     rmse_fn: Any,
     relative_l2_fn: Any,
+    mae_fn: Any,
+    max_abs_fn: Any,
+    weighted_rmse_fn: Any,
+    masked_rmse_fn: Any,
 ) -> dict[str, object]:
     metadata = getattr(data, "metadata", {}) or {}
     row: dict[str, object] = {
@@ -179,6 +198,28 @@ def _case_metric_row(
         row[f"physical_rmse_{name}"] = value
     for name, value in relative_l2_fn(pred_physical, target_physical, FIELD_NAMES).items():
         row[f"physical_relative_l2_{name}"] = value
+    for name, value in mae_fn(pred_physical, target_physical, FIELD_NAMES).items():
+        row[f"physical_mae_{name}"] = value
+    for name, value in max_abs_fn(pred_physical, target_physical, FIELD_NAMES).items():
+        row[f"physical_max_abs_{name}"] = value
+    if hasattr(data, "cell_volume"):
+        for name, value in weighted_rmse_fn(
+            pred_physical, target_physical, data.cell_volume, FIELD_NAMES
+        ).items():
+            row[f"physical_volume_rmse_{name}"] = value
+    for region, attribute in (
+        ("wall_adjacent", "is_airfoil_wall"),
+        ("farfield_adjacent", "is_farfield"),
+    ):
+        if not hasattr(data, attribute):
+            continue
+        mask = getattr(data, attribute) > 0.5
+        if not bool(mask.any()):
+            continue
+        for name, value in masked_rmse_fn(
+            pred_physical, target_physical, mask, FIELD_NAMES
+        ).items():
+            row[f"physical_{region}_rmse_{name}"] = value
     return row
 
 

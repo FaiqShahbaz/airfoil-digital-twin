@@ -7,6 +7,7 @@ from .gcn import GCN
 from .gin import GIN
 from .graph_unet import GraphUNet
 from .meshgraphnet import MeshGraphNet, MeshGraphNetBlock
+from .mlp import NodeMLP
 from .mpnn import MPNN
 from .sage import GraphSAGE
 
@@ -22,5 +23,6 @@ __all__ = [
     "MeshGraphNetBlock",
     "MODEL_REGISTRY",
     "MPNN",
+    "NodeMLP",
     "build_model",
 ]

@@ -263,9 +263,6 @@ def patch_case(case_dir: Path, spec: CaseSpec, template: Path) -> None:
     control = replace_vector_entry(control, "liftDir", f"({lift[0]:.8f} 0 {lift[2]:.8f})")
     control = replace_vector_entry(control, "dragDir", f"({drag[0]:.8f} 0 {drag[2]:.8f})")
     control = replace_vector_entry(control, "UInf", f"({ux:.6f} 0 {uz:.6f})")
-    control = re.sub(r"writeInterval\s+\d+;[^\n]*", f"writeInterval   {WRITE_INTERVAL};          // write final flow-field snapshot for dataset production", control)
-    control = re.sub(r"purgeWrite\s+1;[^\n]*", "purgeWrite      1;              // keep only latest written field folder for dataset production", control)
-    control = re.sub(r"UInf\s+\([^;]+\);[^\n]*", f"UInf            ({ux:.6f} 0 {uz:.6f});", control)
     control_path.write_text(control)
 
     meta = [

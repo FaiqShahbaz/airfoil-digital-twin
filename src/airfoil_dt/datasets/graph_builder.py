@@ -20,8 +20,17 @@ def normalize_aoa(aoa_deg: float, aoa_min: float = -4.0, aoa_max: float = 16.0) 
     return (aoa_deg - aoa_min) / (aoa_max - aoa_min)
 
 
-def build_edge_tensors(cell_centers: np.ndarray, owner: np.ndarray, neighbour: np.ndarray):
-    """Build bidirectional edge indices and `[dx, dz, dist, angle]` attributes."""
+def build_edge_tensors(
+    cell_centers: np.ndarray,
+    owner: np.ndarray,
+    neighbour: np.ndarray,
+    *,
+    schema_version: str = "v1",
+    chord: float = 1.0,
+):
+    """Build bidirectional internal-face edges for one schema version."""
+    if chord <= 0.0:
+        raise ValueError("chord must be positive")
     src = np.concatenate([owner, neighbour]).astype(np.int64)
     dst = np.concatenate([neighbour, owner]).astype(np.int64)
     dx = cell_centers[dst, 0] - cell_centers[src, 0]
@@ -29,17 +38,32 @@ def build_edge_tensors(cell_centers: np.ndarray, owner: np.ndarray, neighbour: n
     dist = np.sqrt(dx**2 + dz**2)
     angle = np.arctan2(dz, dx)
     edge_index = np.stack([src, dst], axis=0)
-    edge_attr = np.stack([dx, dz, dist, angle], axis=1).astype(np.float32)
+    if schema_version == "v1":
+        edge_attr = np.stack([dx, dz, dist, angle], axis=1).astype(np.float32)
+    elif schema_version == "v2":
+        edge_attr = np.stack(
+            [dx / chord, dz / chord, dist / chord, np.sin(angle), np.cos(angle)],
+            axis=1,
+        ).astype(np.float32)
+    else:
+        raise ValueError(f"Unsupported graph schema_version={schema_version!r}")
     return edge_index, edge_attr
 
 
-def build_node_features(snapshot: FieldSnapshot) -> np.ndarray:
+def build_node_features(
+    snapshot: FieldSnapshot,
+    *,
+    schema_version: str = "v1",
+    chord: float = 1.0,
+) -> np.ndarray:
     """Build initial geometry-only node features.
 
     Current features are intentionally conservative and exclude solution fields:
     `[x, z, y, radius, is_airfoil_wall, is_farfield]`.
     Boundary flags are zero-filled until patch/cell mapping is finalized.
     """
+    if chord <= 0.0:
+        raise ValueError("chord must be positive")
     centers = snapshot.cell_centers.astype(np.float32)
     x = centers[:, 0]
     y = centers[:, 1]
@@ -51,7 +75,22 @@ def build_node_features(snapshot: FieldSnapshot) -> np.ndarray:
     if snapshot.boundary_flags:
         is_airfoil = snapshot.boundary_flags.get("is_airfoil_wall", is_airfoil).astype(np.float32)
         is_farfield = snapshot.boundary_flags.get("is_farfield", is_farfield).astype(np.float32)
-    return np.stack([x, z, y, radius, is_airfoil, is_farfield], axis=1).astype(np.float32)
+    if schema_version == "v1":
+        return np.stack([x, z, y, radius, is_airfoil, is_farfield], axis=1).astype(np.float32)
+    if schema_version != "v2":
+        raise ValueError(f"Unsupported graph schema_version={schema_version!r}")
+    if snapshot.cell_volumes is None:
+        raise ValueError("v2 graph schema requires cell_volumes")
+    volumes = np.asarray(snapshot.cell_volumes, dtype=np.float32).reshape(-1)
+    if volumes.shape != (n,) or not np.isfinite(volumes).all() or np.any(volumes <= 0.0):
+        raise ValueError("cell_volumes must be finite, positive, and match cell centers")
+    if not np.any(is_airfoil > 0.0) or not np.any(is_farfield > 0.0):
+        raise ValueError("v2 graph schema requires nonempty wall and farfield cell flags")
+    log_volume = np.log10(np.maximum(volumes / chord**3, 1e-30))
+    return np.stack(
+        [x / chord, z / chord, radius / chord, log_volume, is_airfoil, is_farfield],
+        axis=1,
+    ).astype(np.float32)
 
 
 def build_targets(snapshot: FieldSnapshot) -> np.ndarray:
@@ -62,7 +101,13 @@ def build_targets(snapshot: FieldSnapshot) -> np.ndarray:
     return np.stack([U[:, 0], U[:, 2], snapshot.p.reshape(-1), snapshot.nu_tilda.reshape(-1)], axis=1).astype(np.float32)
 
 
-def build_graph(snapshot: FieldSnapshot, stats: Any | None = None):
+def build_graph(
+    snapshot: FieldSnapshot,
+    stats: Any | None = None,
+    *,
+    schema_version: str = "v1",
+    chord: float = 1.0,
+):
     """Return a PyTorch Geometric `Data` object for one snapshot."""
     try:
         import torch
@@ -70,11 +115,18 @@ def build_graph(snapshot: FieldSnapshot, stats: Any | None = None):
     except ImportError as exc:
         raise ImportError("torch and torch-geometric are required to build graph data") from exc
 
-    x = build_node_features(snapshot)
+    x = build_node_features(snapshot, schema_version=schema_version, chord=chord)
     y = build_targets(snapshot)
-    edge_index, edge_attr = build_edge_tensors(snapshot.cell_centers, snapshot.owner, snapshot.neighbour)
+    edge_index, edge_attr = build_edge_tensors(
+        snapshot.cell_centers,
+        snapshot.owner,
+        snapshot.neighbour,
+        schema_version=schema_version,
+        chord=chord,
+    )
     if stats is not None:
         x, y = stats.normalize_xy(x, y)
+        edge_attr = stats.normalize_edge(edge_attr)
     condition = np.asarray(
         [
             normalize_reynolds(snapshot.metadata.reynolds),
@@ -90,4 +142,42 @@ def build_graph(snapshot: FieldSnapshot, stats: Any | None = None):
         u=torch.as_tensor(condition, dtype=torch.float32).view(1, -1),
     )
     data.metadata = metadata_to_dict(snapshot.metadata)
+    data.metadata["graph_schema_version"] = schema_version
+    data.metadata["chord"] = float(chord)
+    data.pos = torch.as_tensor(
+        snapshot.cell_centers[:, [0, 2]] / chord, dtype=torch.float32
+    )
+    if snapshot.cell_volumes is not None:
+        data.cell_volume = torch.as_tensor(
+            np.asarray(snapshot.cell_volumes).reshape(-1, 1) / chord**3,
+            dtype=torch.float32,
+        )
+    if snapshot.boundary_flags:
+        for name in ("is_airfoil_wall", "is_farfield"):
+            if name in snapshot.boundary_flags:
+                setattr(
+                    data,
+                    name,
+                    torch.as_tensor(snapshot.boundary_flags[name], dtype=torch.float32),
+                )
+    boundary_fields = (
+        snapshot.boundary_face_owner,
+        snapshot.boundary_face_centers,
+        snapshot.boundary_face_area_vectors,
+        snapshot.boundary_face_patch_ids,
+    )
+    if all(value is not None for value in boundary_fields):
+        data.boundary_face_owner = torch.as_tensor(
+            snapshot.boundary_face_owner, dtype=torch.long
+        )
+        data.boundary_face_center = torch.as_tensor(
+            snapshot.boundary_face_centers / chord, dtype=torch.float32
+        )
+        data.boundary_face_area_vector = torch.as_tensor(
+            snapshot.boundary_face_area_vectors / chord**2, dtype=torch.float32
+        )
+        data.boundary_face_patch_id = torch.as_tensor(
+            snapshot.boundary_face_patch_ids, dtype=torch.long
+        )
+        data.metadata["boundary_patch_names"] = list(snapshot.boundary_patch_names)
     return data

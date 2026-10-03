@@ -17,6 +17,8 @@ class NormalizationStats:
     x_std: list[float]
     y_mean: list[float]
     y_std: list[float]
+    edge_mean: list[float] | None = None
+    edge_std: list[float] | None = None
 
     def normalize_xy(self, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         x_mean = np.asarray(self.x_mean, dtype=np.float32)
@@ -30,6 +32,14 @@ class NormalizationStats:
         y_std = np.asarray(self.y_std, dtype=np.float32)
         return y_norm * (y_std + 1e-8) + y_mean
 
+    def normalize_edge(self, edge_attr: np.ndarray) -> np.ndarray:
+        """Normalize edge attributes when edge statistics are available."""
+        if self.edge_mean is None or self.edge_std is None:
+            return edge_attr
+        edge_mean = np.asarray(self.edge_mean, dtype=np.float32)
+        edge_std = np.asarray(self.edge_std, dtype=np.float32)
+        return (edge_attr - edge_mean) / (edge_std + 1e-8)
+
     def to_json(self, path: str | Path) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         Path(path).write_text(json.dumps(self.__dict__, indent=2), encoding="utf-8")
@@ -39,15 +49,27 @@ class NormalizationStats:
         return cls(**json.loads(Path(path).read_text(encoding="utf-8")))
 
 
-def compute_stats(x_arrays: list[np.ndarray], y_arrays: list[np.ndarray]) -> NormalizationStats:
+def compute_stats(
+    x_arrays: list[np.ndarray],
+    y_arrays: list[np.ndarray],
+    edge_arrays: list[np.ndarray] | None = None,
+) -> NormalizationStats:
     """Compute global mean/std from training arrays only."""
     if not x_arrays or not y_arrays:
         raise ValueError("Need at least one x and y array to compute stats")
     x_all = np.concatenate(x_arrays, axis=0).astype(np.float64)
     y_all = np.concatenate(y_arrays, axis=0).astype(np.float64)
+    edge_mean = None
+    edge_std = None
+    if edge_arrays:
+        edge_all = np.concatenate(edge_arrays, axis=0).astype(np.float64)
+        edge_mean = edge_all.mean(axis=0).astype(float).tolist()
+        edge_std = np.maximum(edge_all.std(axis=0), 1e-8).astype(float).tolist()
     return NormalizationStats(
         x_mean=x_all.mean(axis=0).astype(float).tolist(),
         x_std=np.maximum(x_all.std(axis=0), 1e-8).astype(float).tolist(),
         y_mean=y_all.mean(axis=0).astype(float).tolist(),
         y_std=np.maximum(y_all.std(axis=0), 1e-8).astype(float).tolist(),
+        edge_mean=edge_mean,
+        edge_std=edge_std,
     )

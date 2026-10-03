@@ -13,8 +13,9 @@ class GraphUNet(GNNBase):
     """Multi-scale graph encoder-decoder baseline.
 
     This implementation keeps the same public interface as the other model
-    families. It uses graph pooling for multi-scale processing and interpolates
-    pooled features back to retained nodes with skip-style scatter assignment.
+    families. Each encoder level stores its pre-pooling graph, and the decoder
+    scatters the deeper representation back through every saved permutation.
+    Skip connections retain information for nodes removed by TopK pooling.
     """
 
     def __init__(
@@ -59,22 +60,25 @@ class GraphUNet(GNNBase):
         _ = edge_attr
         condition_node = self.expand_condition(u, batch)
         h = self.act(self.input_proj(torch.cat([x, condition_node], dim=-1)))
-        skips: list[tuple[torch.Tensor, torch.Tensor, int]] = []
-        norm_iter = iter(self.norms)
+        skips: list[
+            tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
+        ] = []
 
-        for conv, pool in zip(self.down_convs, self.pools):
-            h = self.drop(self.act(next(norm_iter)(conv(h, edge_index))))
-            h, edge_index, _, batch, perm, _ = pool(h, edge_index, None, batch)
-            skips.append((h, perm, condition_node.size(0)))
+        for level, (conv, pool) in enumerate(zip(self.down_convs, self.pools)):
+            h = self.drop(self.act(self.norms[level](conv(h, edge_index))))
+            pooled_h, pooled_edges, _, pooled_batch, perm, _ = pool(
+                h, edge_index, None, batch
+            )
+            skips.append((h, edge_index, batch, perm))
+            h, edge_index, batch = pooled_h, pooled_edges, pooled_batch
 
-        for conv in self.up_convs:
-            h = self.drop(self.act(next(norm_iter)(conv(h, edge_index))))
-
-        if skips:
-            restored = x.new_zeros((condition_node.size(0), self.hidden_dim))
-            h_skip, perm, _ = skips[0]
-            restored[perm[: h_skip.size(0)]] = h_skip
-            if restored.abs().sum() > 0:
-                h = restored
+        depth = len(self.down_convs)
+        for level, (conv, saved) in enumerate(zip(self.up_convs, reversed(skips))):
+            skip_h, skip_edges, skip_batch, perm = saved
+            restored = skip_h.new_zeros(skip_h.shape)
+            restored[perm] = h
+            h = restored + skip_h
+            edge_index, batch = skip_edges, skip_batch
+            h = self.drop(self.act(self.norms[depth + level](conv(h, edge_index))))
 
         return self.output_head(h)

@@ -1,0 +1,32 @@
+# Versioned physical-geometry graph contract. Generate only from reconciled CFD cases.
+dataset:
+  name: naca0012_l4_sa_v2
+  source: cfd/naca0012/studies/parametricDataset
+  provenance: docs/naca0012_phase2_reconciliation.md
+  graph_schema_version: v2
+  chord_m: 1.0
+  graph_root: data/processed/naca0012_l4_sa_v2/graphs
+  manifest: data/raw/naca0012_l4_sa_v2/manifest.csv
+  splits: data/splits/naca0012_l4_sa_v2_primary.json
+  stats: data/processed/naca0012_l4_sa_v2/normalization_primary.json
+  domain:
+    aoa_deg: [-4.0, 16.0]
+    re: [3000000.0, 9000000.0]
+
+fields:
+  inputs:
+    node_features: [x_over_c, z_over_c, radius_over_c, log10_volume_over_c3, is_airfoil_wall, is_farfield]
+    edge_features: [dx_over_c, dz_over_c, dist_over_c, sin_angle, cos_angle]
+    global_condition: [Re_log_normalized, AoA_normalized]
+  mesh_diagnostics:
+    - cell_volume_over_c3
+    - boundary_face_owner
+    - boundary_face_center_over_c
+    - boundary_face_area_vector_over_c2
+    - boundary_face_patch_id
+  targets: [Ux, Uz, p, nuTilda]
+
+notes:
+  - Version 2 requires nonempty wall/farfield mappings and physical face geometry.
+  - Edge statistics and node/target statistics are computed from training cases only.
+  - CFD output fields remain supervised targets and are never deployable inputs.

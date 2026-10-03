@@ -4,13 +4,14 @@ This directory contains thin command-line entry points for the ML/GNN/digital-tw
 
 Current scripts:
 
-- `check_environment.py`: lightweight Python and optional PyTorch environment check.
+- `check_environment.py`: Python, dependency, CUDA-device, and architecture compatibility check; supports required GPU count/name gates.
 - `export_naca_graphs.py`: converts case manifests and field snapshots into `.pt` graph files.
-- `check_graph_dataset.py`: validates graph tensor shapes, finite values, connectivity, split coverage, metadata/domain bounds, no exact input-target leakage, target range sanity, and fixed topology by default.
-- `compute_stats.py`: computes normalization statistics from exported graph files, preferably using only the training split.
+- `check_graph_dataset.py`: validates graph tensor shapes, finite values, connectivity, split coverage, metadata/condition consistency, paired reverse edges, domain bounds, no exact input-target leakage, target range sanity, and fixed topology by default. Use `--require-boundary-signal --require-physical-geometry --expected-num-nodes 229376` for the v2 L4 scientific gate; pin an approved digest with `--expected-mesh-sha256` on repeat exports.
+- `compute_stats.py`: computes node, edge, and target normalization statistics from exported graph files, preferably using only the training split.
 - `build_splits.py`: creates deterministic train/validation/test splits from a manifest, including random, stratified AoA/Re, AoA extrapolation, Re extrapolation, and corner-holdout modes.
 - `train_experiment.py`: trains a configured GNN from saved graph files and writes checkpoints/history.
 - `evaluate_experiment.py`: evaluates a trained checkpoint on a held-out split and writes metrics.
+- `profile_graph_memory.py`: runs one full forward/backward/AdamW step and records peak CUDA memory before long jobs.
 - `compare_experiments.py`: aggregates evaluated run metrics into a model-family comparison CSV.
 - `create_graph_template.py`: strips supervised targets from an exported graph to create a deployable digital-twin graph template.
 - `create_demo_npz_dataset.py`: creates a tiny synthetic NPZ dataset for fresh-clone software smoke tests only.
@@ -42,3 +43,13 @@ python scripts/build_splits.py --manifest data/raw/naca0012_l4_sa/manifest.csv -
 ```
 
 Scripts should call package code from `src/airfoil_dt/` and remain thin wrappers.
+
+Long training runs can be resumed from `run-dir/checkpoints/last.pt`:
+
+```bash
+python scripts/train_experiment.py --config configs/experiments/naca0012_gcn.yaml --run-dir runs/naca0012_gcn_full_random --resume
+```
+
+The last checkpoint includes optimizer, Python/NumPy/PyTorch/CUDA random state,
+best-metric state, and the early-stopping counter. See `docs/m10_training.md`
+before running on Tesla M10 hardware.

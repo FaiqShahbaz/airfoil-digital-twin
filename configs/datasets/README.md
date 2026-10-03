@@ -12,4 +12,7 @@ Each dataset config should document:
 - Tensor contract for `x`, `edge_attr`, `u`, and `y`.
 - Any domain limits such as AoA and Re range.
 
-The first target dataset is `naca0012_l4_sa`, built from the validated L4 Spalart-Allmaras NACA0012 CFD workflow in `cfd/naca0012`.
+`naca0012_l4_sa` records the legacy v1 graph contract. New scientific runs
+must use `naca0012_l4_sa_v2`, which requires physical boundary-face geometry,
+cell volumes, nonzero boundary mappings, chord-scaled geometric features, and
+training-only edge normalization. The two versions must not be mixed.

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import re
@@ -22,6 +23,8 @@ from typing import Any
 REQUIRED_FIELDS = ("U", "p", "nuTilda")
 OPTIONAL_FIELDS = ("nut", "vorticity", "yPlus")
 MESH_FILES = ("points", "faces", "owner", "neighbour", "boundary")
+LEGACY_SCHEMA_VERSION = "legacy-v1"
+PHYSICAL_SCHEMA_VERSION = "openfoam-physical-v2"
 np: Any = None
 
 
@@ -31,6 +34,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--outdir", default="exports/ml_npz")
     parser.add_argument("--final-time", default="10000")
     parser.add_argument("--status", default="usable")
+    parser.add_argument(
+        "--schema-version",
+        choices=[LEGACY_SCHEMA_VERSION, PHYSICAL_SCHEMA_VERSION],
+        default=LEGACY_SCHEMA_VERSION,
+        help="Preserve legacy exports by default; select physical-v2 explicitly",
+    )
+    parser.add_argument(
+        "--provenance",
+        help="Certified reconciliation CSV; physical-v2 exports only decision=usable cases",
+    )
     parser.add_argument("--case-id", action="append", help="Export only selected case id; repeatable")
     parser.add_argument("--limit", type=int, help="Maximum number of cases to export")
     parser.add_argument("--ascii-workdir", default="exports/ascii_cases")
@@ -50,6 +63,11 @@ def parse_args() -> argparse.Namespace:
         help="Run OpenFOAM postProcess -func writeCellCentres if the C field is missing",
     )
     parser.add_argument(
+        "--write-cell-volumes",
+        action="store_true",
+        help="Run OpenFOAM postProcess -func writeCellVolumes if the V field is missing",
+    )
+    parser.add_argument(
         "--include-optional",
         action="store_true",
         help="Include optional diagnostic arrays when available",
@@ -60,7 +78,16 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     outdir = Path(args.outdir)
-    rows = load_selected_rows(Path(args.summary), args.status, set(args.case_id or []), args.limit)
+    selection_limit = None if args.schema_version == PHYSICAL_SCHEMA_VERSION else args.limit
+    rows = load_selected_rows(
+        Path(args.summary), args.status, set(args.case_id or []), selection_limit
+    )
+    if args.schema_version == PHYSICAL_SCHEMA_VERSION:
+        if not args.provenance:
+            raise SystemExit("physical-v2 export requires --provenance")
+        rows = select_certified_rows(rows, Path(args.provenance))
+        if args.limit is not None:
+            rows = rows[: args.limit]
 
     if args.prepare_ascii:
         prepare_ascii_cases(rows, Path(args.ascii_workdir), args)
@@ -84,7 +111,9 @@ def main() -> int:
                 json.dumps(verify, indent=2, sort_keys=True),
                 encoding="utf-8",
             )
-            manifest_rows.append(manifest_row(row, npz_path.relative_to(outdir)))
+            manifest_rows.append(
+                manifest_row(row, npz_path.relative_to(outdir), verify)
+            )
             print(f"exported {row['case_id']} -> {npz_path}")
         except Exception as exc:
             failures.append({"case_id": row.get("case_id", ""), "error": str(exc)})
@@ -104,6 +133,7 @@ def load_selected_rows(summary: Path, status: str, case_ids: set[str], limit: in
     with summary.open(newline="") as handle:
         rows = list(csv.DictReader(handle))
     selected = []
+    seen: set[str] = set()
     for row in rows:
         if row.get("status") != status:
             continue
@@ -111,8 +141,40 @@ def load_selected_rows(summary: Path, status: str, case_ids: set[str], limit: in
             continue
         if case_ids and row.get("case_id") not in case_ids:
             continue
+        case_id = row.get("case_id", "").strip()
+        if not case_id:
+            raise ValueError(f"selected row in {summary} has no case_id")
+        if case_id in seen:
+            raise ValueError(f"duplicate selected case_id in {summary}: {case_id}")
+        seen.add(case_id)
         selected.append(row)
     return selected[:limit] if limit is not None else selected
+
+
+def select_certified_rows(
+    rows: list[dict[str, str]], provenance_path: Path
+) -> list[dict[str, str]]:
+    decisions: dict[str, str] = {}
+    with provenance_path.open(newline="") as handle:
+        for row in csv.DictReader(handle):
+            case_id = row.get("case_id", "").strip()
+            if not case_id or case_id in decisions:
+                raise ValueError(
+                    f"missing or duplicate case_id in {provenance_path}: {case_id!r}"
+                )
+            decisions[case_id] = row.get("decision", "").strip()
+    missing = [row["case_id"] for row in rows if row["case_id"] not in decisions]
+    if missing:
+        raise ValueError(
+            f"certified provenance is missing selected cases: {missing[:5]}"
+        )
+    selected = [row for row in rows if decisions[row["case_id"]] == "usable"]
+    if not selected:
+        raise ValueError("certified provenance contains no usable selected cases")
+    excluded = len(rows) - len(selected)
+    if excluded:
+        print(f"excluded {excluded} non-certified cases from physical-v2 export")
+    return selected
 
 
 def load_numpy() -> None:
@@ -137,6 +199,8 @@ def prepare_ascii_cases(rows: list[dict[str, str]], ascii_workdir: Path, args: a
         shutil.copytree(src, dst, ignore=shutil.ignore_patterns("processor*"))
         patch_control_dict_ascii(dst / "system" / "controlDict")
         run_write_cell_centres(dst, final_time)
+        if args.schema_version == PHYSICAL_SCHEMA_VERSION:
+            run_write_cell_volumes(dst, final_time)
         run_foam_format_convert(dst, final_time)
         print(f"prepared ASCII case {case_id} -> {dst}")
 
@@ -157,7 +221,16 @@ def patch_control_dict_ascii(path: Path) -> None:
 
 
 def run_foam_format_convert(case_dir: Path, final_time: str) -> None:
-    command = ["foamFormatConvert", "-case", str(case_dir), "-time", final_time]
+    # `-time` alone does not guarantee conversion of constant/polyMesh. The
+    # exporter parses both the selected result time and the constant mesh.
+    command = [
+        "foamFormatConvert",
+        "-case",
+        str(case_dir),
+        "-constant",
+        "-time",
+        final_time,
+    ]
     result = subprocess.run(command, text=True, capture_output=True, check=False)
     if result.returncode != 0:
         raise RuntimeError(
@@ -197,6 +270,21 @@ def export_case(row: dict[str, str], npz_path: Path, args: argparse.Namespace) -
         "p": p.astype(np.float32),
         "nuTilda": nu_tilda.astype(np.float32),
     }
+    if args.schema_version == PHYSICAL_SCHEMA_VERSION:
+        cell_volumes = read_cell_volumes(
+            case_dir, final_time, args.write_cell_volumes
+        )
+        points = read_point_list(poly_mesh / "points")
+        faces = read_face_list(poly_mesh / "faces")
+        patches = read_boundary_patches(poly_mesh / "boundary")
+        arrays.update(
+            {
+                "cell_volumes": cell_volumes.astype(np.float32),
+                **build_boundary_geometry(
+                    points, faces, owner_all, patches, cell_centers.shape[0]
+                ),
+            }
+        )
     if args.include_optional:
         for name in OPTIONAL_FIELDS:
             path = time_dir / name
@@ -208,6 +296,9 @@ def export_case(row: dict[str, str], npz_path: Path, args: argparse.Namespace) -
                 continue
 
     verify = verify_arrays(case_id, row, case_dir, time_dir, arrays)
+    mesh_sha256 = hash_files([poly_mesh / name for name in MESH_FILES])
+    verify["export_schema_version"] = args.schema_version
+    verify["mesh_sha256"] = mesh_sha256
     np.savez_compressed(
         npz_path,
         **arrays,
@@ -217,6 +308,8 @@ def export_case(row: dict[str, str], npz_path: Path, args: argparse.Namespace) -
         batch_id=np.asarray(row.get("batch_id", "")),
         role=np.asarray(row.get("role", "")),
         final_time=np.asarray(float(final_time), dtype=np.float64),
+        export_schema_version=np.asarray(args.schema_version),
+        mesh_sha256=np.asarray(mesh_sha256),
     )
     return verify
 
@@ -245,6 +338,38 @@ def run_write_cell_centres(case_dir: Path, final_time: str) -> None:
         )
 
 
+def read_cell_volumes(case_dir: Path, final_time: str, write_if_missing: bool) -> np.ndarray:
+    candidates = [case_dir / final_time / "V", case_dir / "0" / "V"]
+    existing = next((path for path in candidates if path.is_file()), None)
+    if existing is None and write_if_missing:
+        run_write_cell_volumes(case_dir, final_time)
+        existing = next((path for path in candidates if path.is_file()), None)
+    if existing is None:
+        raise FileNotFoundError(
+            f"Cell-volume field V not found for {case_dir}. "
+            "Run with --write-cell-volumes in an OpenFOAM environment."
+        )
+    return read_scalar_field(existing)
+
+
+def run_write_cell_volumes(case_dir: Path, final_time: str) -> None:
+    command = [
+        "postProcess",
+        "-case",
+        str(case_dir),
+        "-time",
+        final_time,
+        "-func",
+        "writeCellVolumes",
+    ]
+    result = subprocess.run(command, text=True, capture_output=True, check=False)
+    if result.returncode != 0:
+        raise RuntimeError(
+            "writeCellVolumes failed for "
+            f"{case_dir}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+        )
+
+
 def read_label_list(path: Path) -> np.ndarray:
     text = path.read_text(errors="ignore")
     count, body = parse_plain_list(text, path)
@@ -252,6 +377,137 @@ def read_label_list(path: Path) -> np.ndarray:
     if values.size != count:
         raise ValueError(f"{path}: expected {count} labels, parsed {values.size}")
     return values
+
+
+def read_point_list(path: Path) -> np.ndarray:
+    text = path.read_text(errors="ignore")
+    count, body = parse_plain_list(text, path)
+    rows = [
+        tuple(float(part) for part in match)
+        for match in re.findall(
+            r"\(([-+0-9.eE]+)\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)\)", body
+        )
+    ]
+    values = np.asarray(rows, dtype=np.float64)
+    if values.shape != (count, 3):
+        raise ValueError(f"{path}: expected {(count, 3)} points, parsed {values.shape}")
+    return values
+
+
+def read_face_list(path: Path) -> list[np.ndarray]:
+    text = path.read_text(errors="ignore")
+    count, body = parse_plain_list(text, path)
+    faces: list[np.ndarray] = []
+    for size_text, labels_text in re.findall(r"(\d+)\s*\(([^()]*)\)", body):
+        labels = np.asarray([int(value) for value in re.findall(r"\d+", labels_text)], dtype=np.int64)
+        if labels.size != int(size_text):
+            raise ValueError(f"{path}: face declares {size_text} points but has {labels.size}")
+        faces.append(labels)
+    if len(faces) != count:
+        raise ValueError(f"{path}: expected {count} faces, parsed {len(faces)}")
+    return faces
+
+
+def read_boundary_patches(path: Path) -> list[dict[str, Any]]:
+    text = strip_foam_comments(path.read_text(errors="ignore"))
+    patches: list[dict[str, Any]] = []
+    pattern = r"(?:^|\n)\s*([^\s{}()]+)\s*\{([^{}]*)\}"
+    for name, body in re.findall(pattern, text, flags=re.DOTALL):
+        type_match = re.search(r"\btype\s+([^;\s]+)\s*;", body)
+        count_match = re.search(r"\bnFaces\s+(\d+)\s*;", body)
+        start_match = re.search(r"\bstartFace\s+(\d+)\s*;", body)
+        if not (type_match and count_match and start_match):
+            continue
+        patches.append(
+            {
+                "name": name.strip('"'),
+                "type": type_match.group(1),
+                "n_faces": int(count_match.group(1)),
+                "start_face": int(start_match.group(1)),
+            }
+        )
+    if not patches:
+        raise ValueError(f"{path}: no boundary patches parsed")
+    return patches
+
+
+def build_boundary_geometry(
+    points: np.ndarray,
+    faces: list[np.ndarray],
+    owner_all: np.ndarray,
+    patches: list[dict[str, Any]],
+    n_cells: int,
+) -> dict[str, np.ndarray]:
+    """Build non-empty boundary-face geometry and adjacent-cell flags."""
+    if len(faces) != owner_all.size:
+        raise ValueError(
+            f"faces/owner size mismatch: {len(faces)} faces vs {owner_all.size} owners"
+        )
+    selected = [patch for patch in patches if str(patch["type"]).lower() != "empty"]
+    if not selected:
+        raise ValueError("no non-empty physical boundary patches found")
+
+    face_indices: list[int] = []
+    patch_ids: list[int] = []
+    is_airfoil = np.zeros(n_cells, dtype=np.float32)
+    is_farfield = np.zeros(n_cells, dtype=np.float32)
+    for patch_id, patch in enumerate(selected):
+        start = int(patch["start_face"])
+        stop = start + int(patch["n_faces"])
+        if start < 0 or stop > len(faces):
+            raise ValueError(f"boundary patch {patch['name']} has invalid face range")
+        indices = list(range(start, stop))
+        face_indices.extend(indices)
+        patch_ids.extend([patch_id] * len(indices))
+        owners = owner_all[start:stop]
+        name = str(patch["name"]).lower()
+        patch_type = str(patch["type"]).lower()
+        if patch_type == "wall" or "airfoil" in name:
+            is_airfoil[owners] = 1.0
+        if "farfield" in name or "freestream" in name:
+            is_farfield[owners] = 1.0
+
+    if not np.any(is_airfoil) or not np.any(is_farfield):
+        raise ValueError(
+            "could not identify both airfoil wall and farfield patches from boundary names/types"
+        )
+    centers = []
+    area_vectors = []
+    for face_index in face_indices:
+        center, area_vector = polygon_geometry(points[faces[face_index]])
+        centers.append(center)
+        area_vectors.append(area_vector)
+    return {
+        "boundary_face_owner": owner_all[np.asarray(face_indices, dtype=np.int64)].astype(np.int64),
+        "boundary_face_centers": np.asarray(centers, dtype=np.float32),
+        "boundary_face_area_vectors": np.asarray(area_vectors, dtype=np.float32),
+        "boundary_face_patch_ids": np.asarray(patch_ids, dtype=np.int64),
+        "boundary_patch_names": np.asarray([patch["name"] for patch in selected]),
+        "is_airfoil_wall": is_airfoil,
+        "is_farfield": is_farfield,
+    }
+
+
+def polygon_geometry(vertices: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Return area-weighted center and oriented area vector of a planar face."""
+    if vertices.ndim != 2 or vertices.shape[0] < 3 or vertices.shape[1] != 3:
+        raise ValueError(f"invalid face vertex array {vertices.shape}")
+    reference = vertices.mean(axis=0)
+    total_area_vector = np.zeros(3, dtype=np.float64)
+    weighted_center = np.zeros(3, dtype=np.float64)
+    total_area = 0.0
+    for index, first in enumerate(vertices):
+        second = vertices[(index + 1) % vertices.shape[0]]
+        triangle_area_vector = 0.5 * np.cross(first - reference, second - reference)
+        triangle_area = float(np.linalg.norm(triangle_area_vector))
+        if triangle_area == 0.0:
+            continue
+        total_area_vector += triangle_area_vector
+        weighted_center += triangle_area * (reference + first + second) / 3.0
+        total_area += triangle_area
+    if total_area <= 0.0 or not np.isfinite(total_area_vector).all():
+        raise ValueError("degenerate boundary face")
+    return weighted_center / total_area, total_area_vector
 
 
 def read_scalar_field(path: Path) -> np.ndarray:
@@ -284,12 +540,29 @@ def parse_internal_field(text: str, path: Path) -> tuple[int, str]:
 
 
 def parse_plain_list(text: str, path: Path) -> tuple[int, str]:
-    cleaned = re.sub(r"//.*", "", text)
-    matches = list(re.finditer(r"(?:^|\n)\s*(\d+)\s*\((.*?)\)", cleaned, flags=re.DOTALL))
+    cleaned = strip_foam_comments(text)
+    matches = list(re.finditer(r"(?:^|\n)\s*(\d+)\s*\(", cleaned))
     if not matches:
         raise ValueError(f"{path}: could not parse OpenFOAM list")
-    match = matches[-1]
-    return int(match.group(1)), match.group(2)
+    # The first counted parenthesized block is the top-level OpenFOAM list.
+    # Face entries themselves also look like `4(...)`, so selecting the last
+    # match would incorrectly parse only the final face.
+    match = matches[0]
+    opening = match.end() - 1
+    depth = 0
+    for index in range(opening, len(cleaned)):
+        if cleaned[index] == "(":
+            depth += 1
+        elif cleaned[index] == ")":
+            depth -= 1
+            if depth == 0:
+                return int(match.group(1)), cleaned[opening + 1 : index]
+    raise ValueError(f"{path}: unterminated OpenFOAM list")
+
+
+def strip_foam_comments(text: str) -> str:
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    return re.sub(r"//.*", "", text)
 
 
 def float_tokens(text: str) -> list[str]:
@@ -327,6 +600,23 @@ def verify_arrays(case_id: str, row: dict[str, str], case_dir: Path, time_dir: P
             raise ValueError(f"{case_id}: {name} contains NaN or Inf")
     if float(row.get("final_time") or 0.0) < 10000.0:
         raise ValueError(f"{case_id}: summary final_time is below 10000")
+    if "cell_volumes" in arrays:
+        if arrays["cell_volumes"].shape != (n_cells,):
+            raise ValueError(f"{case_id}: cell_volumes shape is invalid")
+        if np.any(arrays["cell_volumes"] <= 0.0):
+            raise ValueError(f"{case_id}: cell_volumes must be positive")
+        n_boundary = arrays["boundary_face_owner"].size
+        for name, shape in {
+            "boundary_face_centers": (n_boundary, 3),
+            "boundary_face_area_vectors": (n_boundary, 3),
+            "boundary_face_patch_ids": (n_boundary,),
+        }.items():
+            if arrays[name].shape != shape:
+                raise ValueError(f"{case_id}: {name} shape {arrays[name].shape}, expected {shape}")
+        if not np.any(arrays["is_airfoil_wall"] > 0.0):
+            raise ValueError(f"{case_id}: no airfoil-wall adjacent cells")
+        if not np.any(arrays["is_farfield"] > 0.0):
+            raise ValueError(f"{case_id}: no farfield-adjacent cells")
 
     return {
         "case_id": case_id,
@@ -354,7 +644,7 @@ def array_summary(arr: np.ndarray) -> dict[str, Any]:
 def file_inventory(case_dir: Path, time_dir: Path) -> dict[str, dict[str, Any]]:
     paths = [
         case_dir / "constant" / "polyMesh" / name for name in MESH_FILES
-    ] + [time_dir / name for name in REQUIRED_FIELDS] + [time_dir / "C"]
+    ] + [time_dir / name for name in REQUIRED_FIELDS] + [time_dir / "C", time_dir / "V"]
     inventory = {}
     for path in paths:
         if path.exists():
@@ -363,7 +653,19 @@ def file_inventory(case_dir: Path, time_dir: Path) -> dict[str, dict[str, Any]]:
     return inventory
 
 
-def manifest_row(row: dict[str, str], npz_path: Path) -> dict[str, Any]:
+def hash_files(paths: list[Path]) -> str:
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(path.name.encode("utf-8"))
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
+def manifest_row(
+    row: dict[str, str], npz_path: Path, verify: dict[str, Any]
+) -> dict[str, Any]:
     return {
         "case_id": row["case_id"],
         "source_path": str(npz_path),
@@ -377,11 +679,17 @@ def manifest_row(row: dict[str, str], npz_path: Path) -> dict[str, Any]:
         "Cl_mean": row.get("Cl_mean", ""),
         "Cd_mean": row.get("Cd_mean", ""),
         "Cm_mean": row.get("Cm_mean", ""),
+        "export_schema_version": verify["export_schema_version"],
+        "mesh_sha256": verify["mesh_sha256"],
     }
 
 
 def write_manifest(rows: list[dict[str, Any]], path: Path) -> None:
-    fields = ["case_id", "source_path", "aoa_deg", "re", "nu", "batch_id", "role", "status", "final_time", "Cl_mean", "Cd_mean", "Cm_mean"]
+    fields = [
+        "case_id", "source_path", "aoa_deg", "re", "nu", "batch_id", "role",
+        "status", "final_time", "Cl_mean", "Cd_mean", "Cm_mean",
+        "export_schema_version", "mesh_sha256",
+    ]
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()

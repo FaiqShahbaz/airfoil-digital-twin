@@ -8,6 +8,7 @@ import csv
 import json
 import random
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit-train-cases", type=int, help="Use only the first N train cases")
     parser.add_argument("--limit-val-cases", type=int, help="Use only the first N validation cases")
     parser.add_argument("--num-workers", type=int, default=0, help="PyG DataLoader worker count")
+    parser.add_argument(
+        "--resume",
+        nargs="?",
+        const="last",
+        help="Resume from a checkpoint path, or run-dir/checkpoints/last.pt when used without a value",
+    )
     return parser.parse_args()
 
 
@@ -93,73 +100,141 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    history: list[dict[str, float | int]] = []
+    history_path = run_dir / "history.csv"
+    summary_path = run_dir / "summary.json"
+    history = _read_history(history_path) if args.resume else []
     best_val = float("inf")
     best_epoch = 0
     epochs_without_improvement = 0
+    start_epoch = 1
 
-    for epoch in range(1, n_epochs + 1):
-        train_loss = _run_epoch(
-            model,
-            train_loader,
-            optimizer,
-            device,
-            torch,
-            field_weights=field_weights,
-            grad_clip=grad_clip,
-        )
-        val_loss = _validate(model, val_loader, device, torch, field_weights=field_weights)
-        metric = val_loss if val_loader is not None else train_loss
-        row = {"epoch": epoch, "train_loss": train_loss, "val_loss": val_loss}
-        history.append(row)
+    if history:
+        best_row = min(history, key=lambda row: float(row.get("val_loss", row.get("train_loss", float("inf")))))
+        best_val = float(best_row.get("val_loss", best_row.get("train_loss", float("inf"))))
+        best_epoch = int(best_row["epoch"])
+        start_epoch = int(history[-1]["epoch"]) + 1
 
-        _save_checkpoint(
-            checkpoint_dir / "last.pt",
-            model,
-            optimizer,
-            epoch,
-            val_loss=metric,
-            config=config,
-        )
-        if metric < best_val:
-            best_val = metric
-            best_epoch = epoch
-            epochs_without_improvement = 0
+    if args.resume:
+        resume_path = checkpoint_dir / "last.pt" if args.resume == "last" else Path(args.resume)
+        if not resume_path.exists():
+            raise SystemExit(f"resume checkpoint not found: {resume_path}")
+        checkpoint = torch.load(resume_path, map_location=device, weights_only=False)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        if "optimizer_state_dict" in checkpoint:
+            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        checkpoint_epoch = int(checkpoint.get("epoch", 0))
+        start_epoch = max(start_epoch, checkpoint_epoch + 1)
+        training_state = checkpoint.get("training_state")
+        best_checkpoint = checkpoint_dir / "best.pt"
+        if training_state:
+            best_val = float(training_state.get("best_val", best_val))
+            best_epoch = int(training_state.get("best_epoch", best_epoch))
+            epochs_without_improvement = int(
+                training_state.get("epochs_without_improvement", 0)
+            )
+            _restore_rng_state(training_state.get("rng_state", {}), torch)
+        elif best_checkpoint.exists():
+            best_payload = torch.load(best_checkpoint, map_location="cpu", weights_only=False)
+            best_val = float(best_payload.get("val_loss", best_val))
+            best_epoch = int(best_payload.get("epoch", best_epoch))
+        print(f"resuming from {resume_path} at epoch {start_epoch}")
+
+    status = "completed"
+    final_epoch = start_epoch - 1
+    try:
+        for epoch in range(start_epoch, n_epochs + 1):
+            epoch_start = time.perf_counter()
+            train_loss = _run_epoch(
+                model,
+                train_loader,
+                optimizer,
+                device,
+                torch,
+                field_weights=field_weights,
+                grad_clip=grad_clip,
+            )
+            val_loss = _validate(model, val_loader, device, torch, field_weights=field_weights)
+            epoch_time_s = time.perf_counter() - epoch_start
+            metric = val_loss if val_loader is not None else train_loss
+            row = {"epoch": epoch, "train_loss": train_loss, "val_loss": val_loss, "epoch_time_s": epoch_time_s}
+            history.append(row)
+            final_epoch = epoch
+
+            improved = metric < best_val
+            if improved:
+                best_val = metric
+                best_epoch = epoch
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+            training_state = {
+                "best_val": best_val,
+                "best_epoch": best_epoch,
+                "epochs_without_improvement": epochs_without_improvement,
+                "rng_state": _capture_rng_state(torch),
+            }
             _save_checkpoint(
-                checkpoint_dir / "best.pt",
+                checkpoint_dir / "last.pt",
                 model,
                 optimizer,
                 epoch,
                 val_loss=metric,
                 config=config,
+                training_state=training_state,
             )
-        else:
-            epochs_without_improvement += 1
+            if improved:
+                _save_checkpoint(
+                    checkpoint_dir / "best.pt",
+                    model,
+                    optimizer,
+                    epoch,
+                    val_loss=metric,
+                    config=config,
+                    training_state=training_state,
+                )
 
-        print(
-            f"epoch={epoch:04d} train_loss={train_loss:.6g} "
-            f"val_loss={val_loss:.6g} best={best_val:.6g}"
+            _write_history(history, history_path)
+            _write_summary(
+                summary_path,
+                status="running",
+                best_epoch=best_epoch,
+                best_val=best_val,
+                final_epoch=final_epoch,
+                n_epochs=n_epochs,
+                train_dataset=train_dataset,
+                val_dataset=val_dataset,
+                device=device,
+                history=history,
+            )
+            print(
+                f"epoch={epoch:04d} train_loss={train_loss:.6g} "
+                f"val_loss={val_loss:.6g} best={best_val:.6g} time_s={epoch_time_s:.1f}",
+                flush=True,
+            )
+            if epochs_without_improvement >= patience:
+                print(f"early stopping after {patience} epochs without improvement")
+                status = "early_stopped"
+                break
+    except KeyboardInterrupt:
+        status = "interrupted"
+        print("training interrupted; wrote latest checkpoint, history, and summary", file=sys.stderr)
+    finally:
+        _write_history(history, history_path)
+        _write_summary(
+            summary_path,
+            status=status,
+            best_epoch=best_epoch,
+            best_val=best_val,
+            final_epoch=final_epoch,
+            n_epochs=n_epochs,
+            train_dataset=train_dataset,
+            val_dataset=val_dataset,
+            device=device,
+            history=history,
         )
-        if epochs_without_improvement >= patience:
-            print(f"early stopping after {patience} epochs without improvement")
-            break
 
-    _write_history(history, run_dir / "history.csv")
-    (run_dir / "summary.json").write_text(
-        json.dumps(
-            {
-                "best_epoch": best_epoch,
-                "best_val_loss": best_val,
-                "num_train_cases": len(train_dataset),
-                "num_val_cases": len(val_dataset),
-                "device": str(device),
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
     print(f"wrote run outputs to {run_dir}")
-    return 0
+    return 130 if status == "interrupted" else 0
 
 
 def _load_dataset_config(path: str | None, config: dict[str, Any]) -> dict[str, Any]:
@@ -207,6 +282,31 @@ def _seed_everything(seed: int, torch_module: Any) -> None:
     torch_module.manual_seed(seed)
     if torch_module.cuda.is_available():
         torch_module.cuda.manual_seed_all(seed)
+
+
+def _capture_rng_state(torch_module: Any) -> dict[str, Any]:
+    state: dict[str, Any] = {
+        "python": random.getstate(),
+        "numpy": np.random.get_state(),
+        "torch": torch_module.get_rng_state(),
+    }
+    if torch_module.cuda.is_available():
+        state["cuda"] = torch_module.cuda.get_rng_state_all()
+    return state
+
+
+def _restore_rng_state(state: dict[str, Any], torch_module: Any) -> None:
+    """Restore stochastic state so a resumed run follows the saved trajectory."""
+    if not state:
+        return
+    if "python" in state:
+        random.setstate(state["python"])
+    if "numpy" in state:
+        np.random.set_state(state["numpy"])
+    if "torch" in state:
+        torch_module.set_rng_state(state["torch"].cpu())
+    if "cuda" in state and torch_module.cuda.is_available():
+        torch_module.cuda.set_rng_state_all([value.cpu() for value in state["cuda"]])
 
 
 def _select_device(requested: str, torch_module: Any):
@@ -286,6 +386,7 @@ def _save_checkpoint(
     epoch: int,
     val_loss: float,
     config: dict[str, Any],
+    training_state: dict[str, Any],
 ) -> None:
     import torch
 
@@ -295,6 +396,7 @@ def _save_checkpoint(
             "val_loss": val_loss,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
+            "training_state": training_state,
             "config": config,
         },
         path,
@@ -304,10 +406,52 @@ def _save_checkpoint(
 def _write_history(rows: list[dict[str, float | int]], path: Path) -> None:
     if not rows:
         return
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _read_history(path: Path) -> list[dict[str, float | int]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, float | int]] = []
+    with path.open(newline="") as handle:
+        for row in csv.DictReader(handle):
+            parsed: dict[str, float | int] = {}
+            for key, value in row.items():
+                parsed[key] = int(value) if key == "epoch" else float(value)
+            rows.append(parsed)
+    return rows
+
+
+def _write_summary(
+    path: Path,
+    status: str,
+    best_epoch: int,
+    best_val: float,
+    final_epoch: int,
+    n_epochs: int,
+    train_dataset: Any,
+    val_dataset: Any,
+    device: Any,
+    history: list[dict[str, float | int]],
+) -> None:
+    epoch_times = [float(row["epoch_time_s"]) for row in history if "epoch_time_s" in row]
+    payload = {
+        "status": status,
+        "final_epoch": final_epoch,
+        "configured_epochs": n_epochs,
+        "best_epoch": best_epoch,
+        "best_val_loss": best_val,
+        "num_train_cases": len(train_dataset),
+        "num_val_cases": len(val_dataset),
+        "device": str(device),
+        "mean_epoch_time_s": sum(epoch_times) / len(epoch_times) if epoch_times else None,
+        "last_epoch_time_s": epoch_times[-1] if epoch_times else None,
+    }
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":
