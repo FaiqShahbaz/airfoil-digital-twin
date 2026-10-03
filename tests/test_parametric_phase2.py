@@ -27,6 +27,7 @@ qc = _load_script("postprocess_parametric_dataset")
 provenance = _load_script("reconcile_provenance")
 generation = _load_script("makeParametricCases")
 exporter = _load_script("export_ml_dataset")
+review_tables = _load_script("prepare_review_tables")
 
 
 def _args() -> Namespace:
@@ -161,6 +162,30 @@ def test_provenance_requires_production_and_qc_evidence(tmp_path: Path) -> None:
     assert provenance.reconcile_case("case", high_inventory, high_export, high_summary, root, bundle)["decision"] == "review"
     approved = {"decision": "pass", "reviewer": "scientist", "evidence": "qc/high_aoa.md", "notes": "inspected forces and separation"}
     assert provenance.reconcile_case("case", high_inventory, high_export, high_summary, root, bundle, approved)["decision"] == "usable"
+    exclusion = {
+        "decision": "exclude",
+        "reviewer": "scientist",
+        "evidence": "qc/parametric_summary.csv",
+        "notes": "failed the frozen final-window force gate",
+    }
+    review_summary = {**high_summary, "status": "review"}
+    excluded = provenance.reconcile_case(
+        "case", high_inventory, high_export, review_summary, root, bundle, None, exclusion
+    )
+    assert excluded["decision"] == "excluded"
+    assert "QC did not certify usable solver output" in excluded["reasons"]
+    assert excluded["exclusion_reviewer"] == "scientist"
+    assert provenance.reconcile_case(
+        "case", high_inventory, None, review_summary, root, bundle, None, exclusion
+    )["decision"] == "excluded"
+    incomplete_exclusion = {**exclusion, "reviewer": ""}
+    assert provenance.reconcile_case(
+        "case", high_inventory, high_export, review_summary, root, bundle, None, incomplete_exclusion
+    )["decision"] == "review"
+    assert provenance.reconcile_case(
+        "case", high_inventory, {**high_export, "re": "7000000"}, review_summary,
+        root, bundle, None, exclusion,
+    )["decision"] == "reject"
     (source / "constant" / "turbulenceProperties").write_text("simulationType RAS;\nRASModel kOmegaSST;\n", encoding="utf-8")
     assert provenance.reconcile_case("case", high_inventory, high_export, high_summary, root, bundle, approved)["decision"] == "reject"
 
@@ -175,6 +200,31 @@ def test_provenance_rejects_duplicate_ids(tmp_path: Path) -> None:
     path.write_text("case_id,status\n", encoding="utf-8")
     with pytest.raises(ValueError, match="no cases"):
         provenance.read_unique_csv(path)
+
+
+def test_review_tables_separate_qc_exclusions_from_high_risk_reviews() -> None:
+    inventory = {
+        "bad": {"case_id": "bad", "aoa_deg": "15", "re": "8500000"},
+        "risk": {"case_id": "risk", "aoa_deg": "14", "re": "6000000"},
+        "plain": {"case_id": "plain", "aoa_deg": "5", "re": "6000000"},
+    }
+    summary = {
+        "bad": {
+            "case_id": "bad", "status": "review", "qc_version": "phase2-v1",
+            "warnings": "Cm drift exceeds threshold",
+        },
+        "risk": {"case_id": "risk", "status": "usable", "qc_version": "phase2-v1"},
+        "plain": {"case_id": "plain", "status": "usable", "qc_version": "phase2-v1"},
+    }
+
+    exclusions, reviews = review_tables.prepare_tables(inventory, summary, "qc/summary.csv")
+
+    assert [row["case_id"] for row in exclusions] == ["bad"]
+    assert exclusions[0]["decision"] == "exclude"
+    assert exclusions[0]["reviewer"] == ""
+    assert [row["case_id"] for row in reviews] == ["risk"]
+    assert reviews[0]["decision"] == ""
+    assert "high_aoa" in reviews[0]["notes"]
 
 
 def test_high_aoa_case_requires_documented_review(tmp_path: Path) -> None:

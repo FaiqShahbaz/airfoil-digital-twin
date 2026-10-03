@@ -21,6 +21,14 @@ The reconciliation tool flags cases with `|AoA| >= 14 deg` and/or `Re >= 8e6` (1
 
 Record sign-off in a CSV with columns `case_id,decision,reviewer,evidence,notes`. `decision=pass` with nonempty reviewer, evidence reference, and notes is required for a flagged case to become `usable` in the reconciliation table. A `pass` never overrides failed automated QC or missing production evidence. Preserve review evidence in a small documented note or local artifact archive and identify it by path; do not claim independent experimental validation from automated checks.
 
+Cases that fail the frozen automated QC may be retained as `excluded` rather
+than silently dropped or incorrectly approved. Record each disposition in a
+separate CSV with the same columns, `decision=exclude`, and nonempty reviewer,
+evidence, and notes. Exclusion never hides a metadata mismatch: genuine
+source/export inconsistencies remain `reject`. Use
+`prepare_review_tables.py` to create pending queues; it never fills reviewer or
+approval evidence automatically.
+
 ## Regeneration On The Native Cluster
 
 From `cfd/naca0012/studies/parametricDataset` on the cluster, in the documented native postprocessing environment:
@@ -31,11 +39,20 @@ python3 reconcile_provenance.py \
   --manifest exports/ml_npz/manifest.csv \
   --summary results/parametric_summary.csv \
   --reviews results/manual_reviews.csv \
+  --exclusions results/exclusions.csv \
   --out results/phase2_provenance.csv \
-  --require-usable
+  --require-resolved
 ```
 
-`--reviews` is optional while drafting; flagged cases remain `review` without it. The command must return nonzero when `--require-usable` is supplied and any case remains unqualified. Before copying a small provenance table into `docs/`, inspect discrepancies against the source runs and re-export rejected cases from the corrected source. If necessary, regenerate the ML manifest from the newly certified QC summary and re-export snapshots. Run reconciliation against that new export to avoid mixing old and new source versions.
+`--reviews` and `--exclusions` are optional while drafting; unresolved cases
+remain `review`. The command returns nonzero with `--require-resolved` if any
+case remains `review` or `reject`. `--require-usable` remains the stricter mode
+for protocols that permit no exclusions. Before copying a small provenance
+table into `docs/`, inspect discrepancies against the source runs and re-export
+rejected cases from the corrected source. If necessary, regenerate the ML
+manifest from the newly certified QC summary and re-export snapshots. Run
+reconciliation against that new export to avoid mixing old and new source
+versions.
 
 For the present local bundle (without cluster run directories), reproduce the tracked *open-gate* review table from the repository root with:
 

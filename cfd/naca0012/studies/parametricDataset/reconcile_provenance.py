@@ -36,7 +36,8 @@ FIELDS = (
     "case_id", "role", "batch_id", "aoa_deg", "re", "source_case", "snapshot", "risk_flag", "manual_review", "inventory_status",
     "export_status", "qc_status", "source_run_present", "solver_log_end",
     "final_fields_present", "force_history_present", "source_setup_verified", "export_verified",
-    "snapshot_sha256", "decision", "reasons",
+    "snapshot_sha256", "exclusion_decision", "exclusion_reviewer",
+    "exclusion_evidence", "exclusion_notes", "decision", "reasons",
 )
 
 
@@ -200,6 +201,7 @@ def reconcile_case(
     inventory_dir: Path,
     manifest_dir: Path,
     review: dict[str, str] | None = None,
+    exclusion: dict[str, str] | None = None,
 ) -> dict[str, str]:
     inv, exp = inventory or {}, export or {}
     row = {name: "" for name in FIELDS}
@@ -214,52 +216,40 @@ def reconcile_case(
         "inventory_status": inv.get("status", ""),
         "export_status": exp.get("status", ""),
         "qc_status": (qc or {}).get("status", ""),
+        "exclusion_decision": (exclusion or {}).get("decision", ""),
+        "exclusion_reviewer": (exclusion or {}).get("reviewer", ""),
+        "exclusion_evidence": (exclusion or {}).get("evidence", ""),
+        "exclusion_notes": (exclusion or {}).get("notes", ""),
     })
     mismatch: list[str] = []
     missing: list[str] = []
+    exclusion_requested = exclusion is not None
+    exclusion_valid = bool(
+        exclusion
+        and exclusion.get("decision", "").strip() == "exclude"
+        and all(exclusion.get(key, "").strip() for key in ("reviewer", "evidence", "notes"))
+    )
+    if exclusion_requested and not exclusion_valid:
+        missing.append(
+            "exclusion record requires decision=exclude plus reviewer, evidence, and notes"
+        )
     if inventory:
         high_aoa = abs(float(inv["aoa_deg"])) >= 14.0
         high_re = float(inv["re"]) >= 8.0e6
         row["risk_flag"] = "+".join(name for name, flagged in (("high_aoa", high_aoa), ("high_re", high_re)) if flagged)
-        if row["risk_flag"]:
+        if row["risk_flag"] and not exclusion_valid:
             row["manual_review"] = (review or {}).get("decision", "")
             if not review or review.get("decision") != "pass" or not all(
                 review.get(key, "").strip() for key in ("reviewer", "evidence", "notes")
             ):
                 missing.append("high-AoA/Re case needs documented physical review")
-    if not inventory or not export:
-        mismatch.append("case absent from inventory or export manifest")
+    if not inventory:
+        mismatch.append("case absent from inventory")
     else:
-        for field in ("role", "batch_id"):
-            if inv.get(field) != exp.get(field):
-                mismatch.append(f"{field} mismatch")
-        for field in ("aoa_deg", "re", "nu"):
-            if not close_number(inv.get(field), exp.get(field)):
-                mismatch.append(f"{field} mismatch")
         if inv.get("include_in_dataset") != "true":
-            mismatch.append("inventory excludes case")
+            mismatch.append("inventory excludes case without a reviewed exclusion record")
         if inv.get("model") != "SpalartAllmaras" or inv.get("mesh_level") != "L4":
             mismatch.append("inventory model/mesh mismatch")
-        if exp.get("status") != "usable":
-            missing.append("export manifest is not usable")
-
-        verify_path = manifest_dir / "verify" / f"{case_id}.verify.json"
-        if verify_path.is_file():
-            try:
-                verify = json.loads(verify_path.read_text(encoding="utf-8"))
-                if verify.get("case_id") != case_id or not all(
-                    close_number(verify.get(field), exp.get(field)) for field in ("aoa_deg", "re")
-                ):
-                    mismatch.append("export verification metadata mismatch")
-                source_path = Path(exp["source_path"])
-                snapshot = source_path if source_path.is_absolute() else manifest_dir / source_path
-                row["snapshot_sha256"], problems = snapshot_evidence(snapshot, case_id, exp, verify)
-                mismatch.extend(problems)
-                row["export_verified"] = str(not problems and "export verification metadata mismatch" not in mismatch).lower()
-            except (OSError, ValueError, KeyError, TypeError) as exc:
-                mismatch.append(f"export verification unreadable: {exc}")
-        else:
-            missing.append("export verification missing")
 
         source_path = Path(inv.get("source_path", ""))
         source = source_path if source_path.is_absolute() else inventory_dir / source_path
@@ -280,9 +270,39 @@ def reconcile_case(
         else:
             missing.append("production source run unavailable locally")
 
+    if export:
+        for field in ("role", "batch_id"):
+            if inv.get(field) != exp.get(field):
+                mismatch.append(f"{field} mismatch")
+        for field in ("aoa_deg", "re", "nu"):
+            if not close_number(inv.get(field), exp.get(field)):
+                mismatch.append(f"{field} mismatch")
+        if exp.get("status") != "usable":
+            missing.append("export manifest is not usable")
+
+        verify_path = manifest_dir / "verify" / f"{case_id}.verify.json"
+        if verify_path.is_file():
+            try:
+                verify = json.loads(verify_path.read_text(encoding="utf-8"))
+                if verify.get("case_id") != case_id or not all(
+                    close_number(verify.get(field), exp.get(field)) for field in ("aoa_deg", "re")
+                ):
+                    mismatch.append("export verification metadata mismatch")
+                source_path = Path(exp["source_path"])
+                snapshot = source_path if source_path.is_absolute() else manifest_dir / source_path
+                row["snapshot_sha256"], problems = snapshot_evidence(snapshot, case_id, exp, verify)
+                mismatch.extend(problems)
+                row["export_verified"] = str(not problems and "export verification metadata mismatch" not in mismatch).lower()
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                mismatch.append(f"export verification unreadable: {exc}")
+        else:
+            missing.append("export verification missing")
+    elif not exclusion_valid:
+        mismatch.append("case absent from export manifest")
+
     if qc is None:
         missing.append("phase2 QC summary unavailable")
-    elif inventory and export:
+    elif inventory:
         for field in ("aoa_deg", "re", "nu"):
             if not close_number(qc.get(field), inv.get(field)):
                 mismatch.append(f"QC {field} mismatch")
@@ -290,25 +310,46 @@ def reconcile_case(
             missing.append("QC summary must be regenerated with phase2-v1 rules")
         if qc.get("status") != "usable" or qc.get("solver_log_end", "").lower() != "true":
             missing.append("QC did not certify usable solver output")
-        if not close_number(qc.get("final_time"), exp.get("final_time")):
-            mismatch.append("QC/export final time mismatch")
-        for name in ("Cl", "Cd", "Cm"):
-            if not close_number(qc.get(f"{name}_mean"), exp.get(f"{name}_mean")):
-                mismatch.append(f"QC/export {name} mean mismatch")
+        if export:
+            if not close_number(qc.get("final_time"), exp.get("final_time")):
+                mismatch.append("QC/export final time mismatch")
+            for name in ("Cl", "Cd", "Cm"):
+                if not close_number(qc.get(f"{name}_mean"), exp.get(f"{name}_mean")):
+                    mismatch.append(f"QC/export {name} mean mismatch")
 
-    row["decision"] = "reject" if mismatch else "review" if missing else "usable"
+    row["decision"] = (
+        "reject" if mismatch else "excluded" if exclusion_valid else "review" if missing else "usable"
+    )
     row["reasons"] = " | ".join(mismatch + missing)
     return row
 
 
-def reconcile(inventory_path: Path, manifest_path: Path, summary_path: Path | None, reviews_path: Path | None = None) -> list[dict[str, str]]:
+def reconcile(
+    inventory_path: Path,
+    manifest_path: Path,
+    summary_path: Path | None,
+    reviews_path: Path | None = None,
+    exclusions_path: Path | None = None,
+) -> list[dict[str, str]]:
     inventory = read_unique_csv(inventory_path)
     exports = read_unique_csv(manifest_path)
     qc = read_unique_csv(summary_path) if summary_path and summary_path.is_file() else {}
     reviews = read_unique_csv(reviews_path) if reviews_path and reviews_path.is_file() else {}
+    exclusions = read_unique_csv(exclusions_path) if exclusions_path and exclusions_path.is_file() else {}
     return [
-        reconcile_case(case_id, inventory.get(case_id), exports.get(case_id), qc.get(case_id), inventory_path.parent, manifest_path.parent, reviews.get(case_id))
-        for case_id in sorted(inventory.keys() | exports.keys() | qc.keys() | reviews.keys())
+        reconcile_case(
+            case_id,
+            inventory.get(case_id),
+            exports.get(case_id),
+            qc.get(case_id),
+            inventory_path.parent,
+            manifest_path.parent,
+            reviews.get(case_id),
+            exclusions.get(case_id),
+        )
+        for case_id in sorted(
+            inventory.keys() | exports.keys() | qc.keys() | reviews.keys() | exclusions.keys()
+        )
     ]
 
 
@@ -319,18 +360,31 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, required=True, help="ML export manifest.csv")
     parser.add_argument("--summary", type=Path, help="Phase2 postprocessed parametric_summary.csv")
     parser.add_argument("--reviews", type=Path, help="Manual reviews CSV: case_id,decision,reviewer,evidence,notes")
+    parser.add_argument("--exclusions", type=Path, help="Reviewed exclusions CSV: case_id,decision,reviewer,evidence,notes")
     parser.add_argument("--out", type=Path, required=True, help="Compact per-case evidence CSV")
     parser.add_argument("--require-usable", action="store_true", help="Fail unless every case is usable")
+    parser.add_argument(
+        "--require-resolved",
+        action="store_true",
+        help="Fail unless every case is either usable or explicitly excluded",
+    )
     args = parser.parse_args()
-    rows = reconcile(args.inventory, args.manifest, args.summary, args.reviews)
+    rows = reconcile(args.inventory, args.manifest, args.summary, args.reviews, args.exclusions)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(rows)
-    counts = {name: sum(row["decision"] == name for row in rows) for name in ("usable", "review", "reject")}
+    counts = {
+        name: sum(row["decision"] == name for row in rows)
+        for name in ("usable", "excluded", "review", "reject")
+    }
     print(f"Wrote {len(rows)} case records to {args.out}: {counts}")
-    return 1 if args.require_usable and counts["usable"] != len(rows) else 0
+    if args.require_usable and counts["usable"] != len(rows):
+        return 1
+    if args.require_resolved and counts["usable"] + counts["excluded"] != len(rows):
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

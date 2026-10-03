@@ -33,8 +33,10 @@ Before starting, obtain:
 - the Git tag or commit to run;
 - the production `parametricDataset` directory with `cases.csv`, source cases,
   legacy export manifest/verification files, and post-processing histories;
-- `results/manual_reviews.csv` for every required high-AoA/high-Re review, with
+- a completed manual-review table for every included high-AoA/high-Re case, with
   columns `case_id,decision,reviewer,evidence,notes`;
+- a reviewed exclusion table for every automated-QC failure that will not be
+  rerun, using the same columns and `decision=exclude`;
 - a persistent artifact directory with enough quota for ASCII staging, NPZ
   snapshots, graphs, and run output;
 - the site-specific command used to activate OpenFOAM.
@@ -66,8 +68,7 @@ Confirm the required CFD inputs before proceeding:
 
 ```bash
 test -f "$AIRFOIL_CFD_STUDY/cases.csv"
-test -f "$AIRFOIL_CFD_STUDY/exports/ml_npz/manifest.csv"
-test -f "$AIRFOIL_CFD_STUDY/results/manual_reviews.csv"
+test -f "$AIRFOIL_CFD_STUDY/exports/ml_npz_full/manifest.csv"
 ```
 
 ## 2. Create the M10 environment
@@ -110,17 +111,30 @@ python -m pip freeze > "$AIRFOIL_ARTIFACT_ROOT/reports/pip-freeze.txt"
 
 ```bash
 cd "$AIRFOIL_CFD_STUDY"
-python3 postprocess_parametric_dataset.py --notes-dir ../../notes
-python3 reconcile_provenance.py \
-  --manifest exports/ml_npz/manifest.csv \
-  --summary results/parametric_summary.csv \
-  --reviews results/manual_reviews.csv \
-  --out results/phase2_provenance.csv \
-  --require-usable
+python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/postprocess_parametric_dataset.py" \
+  --cases-csv cases.csv \
+  --outdir "$AIRFOIL_ARTIFACT_ROOT/qc" \
+  --notes-dir "$AIRFOIL_ARTIFACT_ROOT/qc"
+python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/prepare_review_tables.py" \
+  --inventory cases.csv \
+  --summary "$AIRFOIL_ARTIFACT_ROOT/qc/parametric_summary.csv" \
+  --exclusions-out "$AIRFOIL_ARTIFACT_ROOT/qc/exclusions.csv" \
+  --reviews-out "$AIRFOIL_ARTIFACT_ROOT/qc/manual_reviews.csv"
+python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/reconcile_provenance.py" \
+  --inventory cases.csv \
+  --manifest exports/ml_npz_full/manifest.csv \
+  --summary "$AIRFOIL_ARTIFACT_ROOT/qc/parametric_summary.csv" \
+  --reviews "$AIRFOIL_ARTIFACT_ROOT/qc/manual_reviews.csv" \
+  --exclusions "$AIRFOIL_ARTIFACT_ROOT/qc/exclusions.csv" \
+  --out "$AIRFOIL_ARTIFACT_ROOT/qc/phase2_provenance.csv" \
+  --require-resolved
 ```
 
-Stop if the command returns nonzero. A manual `pass` never overrides missing
-source evidence or failed automated QC.
+The generated review tables are pending queues, not approvals. A researcher
+must fill every reviewer/evidence field and inspect the cited evidence. Stop if
+the command returns nonzero. A manual `pass` never overrides missing source
+evidence or failed automated QC; an explicit exclusion keeps the case in the
+audit trail but removes it from the physical export.
 
 ## 4. Export the versioned physical dataset
 
@@ -131,9 +145,9 @@ unchanged.
 ```bash
 mkdir -p "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2"
 cd "$AIRFOIL_CFD_STUDY"
-python3 export_ml_dataset.py \
-  --summary results/parametric_summary.csv \
-  --provenance results/phase2_provenance.csv \
+python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/export_ml_dataset.py" \
+  --summary "$AIRFOIL_ARTIFACT_ROOT/qc/parametric_summary.csv" \
+  --provenance "$AIRFOIL_ARTIFACT_ROOT/qc/phase2_provenance.csv" \
   --schema-version openfoam-physical-v2 \
   --outdir "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw" \
   --ascii-workdir "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/ascii_cases" \
@@ -151,12 +165,14 @@ assuming that certification of the earlier export transfers automatically:
 
 ```bash
 cd "$AIRFOIL_CFD_STUDY"
-python3 reconcile_provenance.py \
+python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/reconcile_provenance.py" \
+  --inventory cases.csv \
   --manifest "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw/manifest.csv" \
-  --summary results/parametric_summary.csv \
-  --reviews results/manual_reviews.csv \
+  --summary "$AIRFOIL_ARTIFACT_ROOT/qc/parametric_summary.csv" \
+  --reviews "$AIRFOIL_ARTIFACT_ROOT/qc/manual_reviews.csv" \
+  --exclusions "$AIRFOIL_ARTIFACT_ROOT/qc/exclusions.csv" \
   --out "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/phase2_provenance_physical_v2.csv" \
-  --require-usable
+  --require-resolved
 ```
 
 Stop if this second reconciliation fails.
@@ -286,7 +302,8 @@ full graph/model fits one 8-GB GPU with operational memory margin.
 
 Stop and return the evidence if any of these occurs:
 
-- any provenance row is `review` or `reject`;
+- any provenance row is `review` or `reject`; documented `excluded` rows are
+  allowed but must not appear in the export manifest;
 - a physical array, boundary mapping, cell volume, or mesh hash is missing;
 - the graph count differs from the certified manifest;
 - a graph is not the approved 229,376-cell L4 topology;
@@ -303,7 +320,7 @@ Return only small evidence and summary artifacts:
 
 - Git revision and environment export;
 - `nvidia-smi` and environment-check output;
-- certified provenance and manual review table;
+- certified provenance, manual review table, and reviewed exclusion table;
 - physical-v2 post-export reconciliation table;
 - dataset, mesh, split, and normalization hashes;
 - graph validation summary;
