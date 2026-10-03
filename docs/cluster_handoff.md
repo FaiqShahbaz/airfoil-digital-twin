@@ -120,6 +120,11 @@ python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/prepare_revie
   --summary "$AIRFOIL_ARTIFACT_ROOT/qc/parametric_summary.csv" \
   --exclusions-out "$AIRFOIL_ARTIFACT_ROOT/qc/exclusions.csv" \
   --reviews-out "$AIRFOIL_ARTIFACT_ROOT/qc/manual_reviews.csv"
+python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/generate_review_evidence.py" \
+  --inventory cases.csv \
+  --summary "$AIRFOIL_ARTIFACT_ROOT/qc/parametric_summary.csv" \
+  --queue "$AIRFOIL_ARTIFACT_ROOT/qc/manual_reviews.csv" \
+  --outdir "$AIRFOIL_ARTIFACT_ROOT/qc/review_evidence"
 python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/reconcile_provenance.py" \
   --inventory cases.csv \
   --manifest exports/ml_npz_full/manifest.csv \
@@ -130,8 +135,9 @@ python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/reconcile_pro
   --require-resolved
 ```
 
-The generated review tables are pending queues, not approvals. A researcher
-must fill every reviewer/evidence field and inspect the cited evidence. Stop if
+The generated review tables and plots are pending evidence, not approvals. A
+researcher must inspect each force/surface plot and the referenced wake file,
+then fill every reviewer/evidence field. Stop if
 the command returns nonzero. A manual `pass` never overrides missing source
 evidence or failed automated QC; an explicit exclusion keeps the case in the
 audit trail but removes it from the physical export.

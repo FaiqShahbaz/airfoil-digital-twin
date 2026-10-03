@@ -28,6 +28,9 @@ evidence, and notes. Exclusion never hides a metadata mismatch: genuine
 source/export inconsistencies remain `reject`. Use
 `prepare_review_tables.py` to create pending queues; it never fills reviewer or
 approval evidence automatically.
+`generate_review_evidence.py` creates force-history and surface-diagnostic
+plots, per-case checklists, and hashes/references for available wake VTK files.
+These artifacts support review but never constitute an automatic pass.
 
 ## Regeneration On The Native Cluster
 

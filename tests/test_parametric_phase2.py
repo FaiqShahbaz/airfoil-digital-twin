@@ -28,6 +28,7 @@ provenance = _load_script("reconcile_provenance")
 generation = _load_script("makeParametricCases")
 exporter = _load_script("export_ml_dataset")
 review_tables = _load_script("prepare_review_tables")
+review_evidence = _load_script("generate_review_evidence")
 
 
 def _args() -> Namespace:
@@ -225,6 +226,20 @@ def test_review_tables_separate_qc_exclusions_from_high_risk_reviews() -> None:
     assert [row["case_id"] for row in reviews] == ["risk"]
     assert reviews[0]["decision"] == ""
     assert "high_aoa" in reviews[0]["notes"]
+
+
+def test_review_evidence_parses_surface_raw_and_flags_risk(tmp_path: Path) -> None:
+    raw = tmp_path / "p.raw"
+    raw.write_text(
+        "# p FACE_DATA 2\n# x y z p\n0.0 -0.5 0.1 2.0\n1.0 -0.5 -0.1 -1.0\n",
+        encoding="utf-8",
+    )
+
+    columns, values = review_evidence.read_raw_surface(raw)
+
+    assert columns == ["x", "y", "z", "p"]
+    np.testing.assert_allclose(review_evidence.column(columns, values, "p"), [2.0, -1.0])
+    assert review_evidence.risk_flag(15.0, 8.5e6) == "high_aoa+high_re"
 
 
 def test_high_aoa_case_requires_documented_review(tmp_path: Path) -> None:

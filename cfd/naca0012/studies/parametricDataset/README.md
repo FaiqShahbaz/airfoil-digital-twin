@@ -63,7 +63,7 @@ source ~/Cluster_Project/Software/miniconda/bin/activate naca_post
 python3 postprocess_parametric_dataset.py --notes-dir ../../notes
 ```
 
-The Phase 2 postprocessor writes `qc_version=phase2-v1`; a missing/nonfinite force or y+ diagnostic, excessive `Cl`/`Cd`/`Cm` drift, or missing reconstructed final fields prevents automatic `usable` status. Reconcile the inventory, QC summary, export manifest, source case, and verification JSON using `reconcile_provenance.py`. High-AoA/Re cases additionally require documented physical review. `prepare_review_tables.py` creates pending manual-review and exclusion queues without approving them. A reviewed exclusion remains visible in the 100-case audit but is omitted from the physical export. See `docs/naca0012_phase2_reconciliation.md` from the repository root for exact commands, thresholds, and the current open-gate status.
+The Phase 2 postprocessor writes `qc_version=phase2-v1`; a missing/nonfinite force or y+ diagnostic, excessive `Cl`/`Cd`/`Cm` drift, or missing reconstructed final fields prevents automatic `usable` status. Reconcile the inventory, QC summary, export manifest, source case, and verification JSON using `reconcile_provenance.py`. High-AoA/Re cases additionally require documented physical review. `prepare_review_tables.py` creates pending manual-review and exclusion queues without approving them, while `generate_review_evidence.py` creates force/surface plots and wake references for human inspection. A reviewed exclusion remains visible in the 100-case audit but is omitted from the physical export. See `docs/naca0012_phase2_reconciliation.md` from the repository root for exact commands, thresholds, and the current open-gate status.
 
 ## Export Manifest
 
