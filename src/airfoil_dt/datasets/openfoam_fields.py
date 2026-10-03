@@ -26,6 +26,9 @@ class CaseMetadata:
     batch_id: str = ""
     export_schema_version: str = ""
     mesh_sha256: str = ""
+    qc_status: str = ""
+    provenance_decision: str = ""
+    dataset_scope: str = ""
 
 
 @dataclass(frozen=True)
@@ -85,6 +88,9 @@ def read_manifest(path: str | Path) -> list[CaseMetadata]:
                     batch_id=row.get("batch_id", ""),
                     export_schema_version=row.get("export_schema_version", ""),
                     mesh_sha256=row.get("mesh_sha256", ""),
+                    qc_status=row.get("status", ""),
+                    provenance_decision=row.get("provenance_decision", ""),
+                    dataset_scope=row.get("dataset_scope", ""),
                 )
             )
     if not rows:
@@ -197,4 +203,7 @@ def metadata_to_dict(metadata: CaseMetadata) -> dict[str, Any]:
         "batch_id": metadata.batch_id,
         "export_schema_version": metadata.export_schema_version,
         "mesh_sha256": metadata.mesh_sha256,
+        "qc_status": metadata.qc_status,
+        "provenance_decision": metadata.provenance_decision,
+        "dataset_scope": metadata.dataset_scope,
     }

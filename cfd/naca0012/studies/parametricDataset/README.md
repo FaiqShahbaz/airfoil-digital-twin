@@ -93,4 +93,13 @@ Run `reconcile_provenance.py` again against the v2 manifest after export; this
 second pass verifies the physical arrays, schema marker, and mesh hash in the
 new snapshots.
 
+To retain every complete case for exploratory GNN development while preserving
+the validation warnings, add `--include-review`. Review rows are written with
+`provenance_decision=review` and `dataset_scope=exploratory_review`; this option
+does not certify them. The default remains certified-only.
+
+The ASCII staging copy contains only `0`, `constant`, `system`, and the final
+time directory. Logs, processor directories, and `postProcessing` are not
+duplicated.
+
 The downstream ML workflow expects a compact manifest plus reduced `.npz` snapshots containing `cell_centers`, `owner`, `neighbour`, `U`, `p`, and `nuTilda`. Those artifacts are copied into ignored local paths under `data/raw/naca0012_l4_sa/` before running the graph export scripts documented in `docs/artifacts.md`.

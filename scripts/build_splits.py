@@ -39,12 +39,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--re-threshold", type=float, default=8.0e6)
     parser.add_argument("--aoa-side", choices=("high", "low"), default="high")
     parser.add_argument("--re-side", choices=("high", "low"), default="high")
+    parser.add_argument(
+        "--provenance-decision",
+        action="append",
+        choices=("usable", "review"),
+        help=(
+            "Restrict cases by manifest provenance decision; repeat to allow more "
+            "than one. Omit to retain every manifest case."
+        ),
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     cases = read_manifest(args.manifest)
+    if args.provenance_decision:
+        allowed = set(args.provenance_decision)
+        cases = [case for case in cases if case.provenance_decision in allowed]
+        if not cases:
+            raise SystemExit(
+                f"manifest has no cases with provenance decisions {sorted(allowed)}"
+            )
     splits = _build_splits(args, cases)
     save_splits(splits, args.out)
     print(f"wrote {args.out}")

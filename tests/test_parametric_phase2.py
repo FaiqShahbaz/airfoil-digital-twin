@@ -308,7 +308,55 @@ def test_physical_export_selects_only_certified_cases(tmp_path: Path) -> None:
 
     selected = exporter.select_certified_rows(rows, provenance_path)
 
-    assert selected == [{"case_id": "a"}]
+    assert selected == [{
+        "case_id": "a",
+        "provenance_decision": "usable",
+        "dataset_scope": "certified",
+    }]
+
+
+def test_physical_export_can_retain_review_cases_with_explicit_labels(
+    tmp_path: Path,
+) -> None:
+    provenance_path = tmp_path / "provenance.csv"
+    provenance_path.write_text(
+        "case_id,decision\na,usable\nb,review\nc,reject\n", encoding="utf-8"
+    )
+    rows = [{"case_id": "a"}, {"case_id": "b"}, {"case_id": "c"}]
+
+    selected = exporter.select_provenance_rows(
+        rows, provenance_path, include_review=True
+    )
+
+    assert selected == [
+        {
+            "case_id": "a",
+            "provenance_decision": "usable",
+            "dataset_scope": "certified",
+        },
+        {
+            "case_id": "b",
+            "provenance_decision": "review",
+            "dataset_scope": "exploratory_review",
+        },
+    ]
+
+
+def test_ascii_staging_excludes_logs_and_postprocessing(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    destination = tmp_path / "staged"
+    for name in ("0", "constant", "system", "10000", "postProcessing"):
+        directory = source / name
+        directory.mkdir(parents=True)
+        (directory / "marker").write_text(name, encoding="utf-8")
+    (source / "log.simpleFoam.cluster").write_text("End\n", encoding="utf-8")
+
+    exporter.stage_case_inputs(source, destination, "10000")
+
+    for name in ("0", "constant", "system", "10000"):
+        assert (destination / name / "marker").is_file()
+    assert not (destination / "postProcessing").exists()
+    assert not (destination / "log.simpleFoam.cluster").exists()
 
 
 def test_ascii_conversion_includes_constant_mesh(monkeypatch, tmp_path: Path) -> None:

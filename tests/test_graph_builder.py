@@ -182,3 +182,18 @@ def test_manifest_rejects_duplicate_case_ids(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="duplicate"):
         read_manifest(manifest)
+
+
+def test_manifest_preserves_dataset_review_labels(tmp_path) -> None:
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text(
+        "case_id,source_path,aoa_deg,re,status,provenance_decision,dataset_scope\n"
+        "case,a.npz,0,6000000,review,review,exploratory_review\n",
+        encoding="utf-8",
+    )
+
+    case = read_manifest(manifest)[0]
+
+    assert case.qc_status == "review"
+    assert case.provenance_decision == "review"
+    assert case.dataset_scope == "exploratory_review"

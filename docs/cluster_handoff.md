@@ -12,6 +12,13 @@ steps in order and stop at the first failed gate. Preserve the failure output;
 do not weaken a threshold, omit a case, change a split, or edit a model config
 without review.
 
+An explicitly requested exploratory all-case track is also supported. It keeps
+QC/provenance review rows in the dataset but labels them
+`dataset_scope=exploratory_review`. It is suitable for pipeline development and
+comparison against a certified-only split, but it does not close the CFD
+validation gate and cannot support benchmark, accuracy, or digital-twin
+validation claims.
+
 Checklist:
 
 - [ ] Confirm the immutable Git revision and a clean working tree.
@@ -148,6 +155,8 @@ The ASCII staging step writes cell centers and volumes with OpenFOAM, converts
 the required mesh/field files to ASCII, and leaves the production cases
 unchanged.
 
+Run staging in the native OpenFOAM environment first:
+
 ```bash
 mkdir -p "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2"
 cd "$AIRFOIL_CFD_STUDY"
@@ -157,13 +166,41 @@ python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/export_ml_dat
   --schema-version openfoam-physical-v2 \
   --outdir "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw" \
   --ascii-workdir "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/ascii_cases" \
-  --prepare-ascii \
+  --prepare-ascii
+```
+
+Then activate the NumPy post-processing environment and write the snapshots:
+
+```bash
+python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/export_ml_dataset.py" \
+  --summary "$AIRFOIL_ARTIFACT_ROOT/qc/parametric_summary.csv" \
+  --provenance "$AIRFOIL_ARTIFACT_ROOT/qc/phase2_provenance.csv" \
+  --schema-version openfoam-physical-v2 \
+  --outdir "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw" \
+  --ascii-workdir "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/ascii_cases" \
   --from-ascii
 ```
 
 The exporter requires positive cell volumes and identifies non-empty airfoil
 and farfield patch faces from `polyMesh/boundary`. It writes boundary owners,
 centers, oriented area vectors, patch IDs, and adjacent-cell flags.
+
+### Exploratory all-100 export
+
+Only when the project owner has explicitly chosen to retain review cases, add
+`--include-review` to both commands above. The source summary must contain 100
+complete `usable` or `review` rows, and the provenance table must contain no
+`reject` rows. Verify the result rather than assuming all 100 were selected:
+
+```bash
+test "$(find "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw/snapshots" -name '*.npz' | wc -l)" -eq 100
+test "$(find "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw/verify" -name '*.verify.json' | wc -l)" -eq 100
+awk -F, 'NR>1 {count[$10]++} END {for (key in count) print key, count[key]}' \
+  "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw/manifest.csv"
+```
+
+The final command reports the `dataset_scope` column. Continue only if the
+counts sum to 100 and every non-certified row is `exploratory_review`.
 
 Reconcile the newly written physical snapshots as a separate evidence pass.
 This checks the physical arrays and their verification summaries rather than
@@ -181,7 +218,9 @@ python3 "$AIRFOIL_REPO_ROOT/cfd/naca0012/studies/parametricDataset/reconcile_pro
   --require-resolved
 ```
 
-Stop if this second reconciliation fails.
+For the certified track, stop if this second reconciliation fails. For the
+explicit all-case track, omit `--require-resolved`; retain the resulting review
+rows as the audit record and do not describe that track as validated.
 
 ## 5. Build and validate v2 graphs
 
@@ -212,6 +251,21 @@ python scripts/compute_stats.py \
   --splits "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/primary_split.json" \
   --out "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/normalization_primary.json"
 ```
+
+For the all-case track, name the split `all_cases_exploratory_split.json` and
+omit `--provenance-decision`; all 100 manifest cases are retained. Also create
+a comparison split containing only currently certified rows:
+
+```bash
+python scripts/build_splits.py \
+  --manifest "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw/manifest.csv" \
+  --mode stratified \
+  --provenance-decision usable \
+  --out "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/certified_only_split.json"
+```
+
+Normalization must be computed separately from the training partition of each
+split. Never reuse all-case statistics for the certified-only evaluation.
 
 Stop if validation fails. The validator also requires one consistent mesh hash
 across the dataset. Record that hash in the release evidence; on repeat runs,
@@ -335,6 +389,23 @@ Return only small evidence and summary artifacts:
 
 Do not push production cases, ASCII staging cases, NPZ files, graph tensors, or
 ordinary checkpoints into the repository.
+
+## 8.1 Minimal archive to copy off the cluster
+
+The physical-v2 snapshots are the portable training source. Copy these items
+to a private ignored directory on the Mac:
+
+- `raw/manifest.csv`, `raw/snapshots/`, and `raw/verify/`;
+- both provenance CSVs plus the QC summary/review tables;
+- split JSON files, per-split normalization JSON files, graph-validation output,
+  and `reports/artifact_hashes.sha256`;
+- `SOURCE_REVISION` and the resolved environment reports.
+
+The graph `.pt` files are reproducible from the NPZ snapshots and do not need
+to be copied. The `ascii_cases` directory is temporary scratch and must not be
+copied; remove it only after NPZ verification and the off-cluster checksum
+check succeed. The original CFD cases remain the authoritative regeneration
+source on the cluster.
 
 ## 9. Work that requires approval after the handoff
 

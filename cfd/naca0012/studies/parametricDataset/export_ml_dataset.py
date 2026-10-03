@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export usable NACA0012 parametric cases to compact ML snapshots.
+"""Export selected NACA0012 parametric cases to compact ML snapshots.
 
 The reference/CFD repository owns conversion from OpenFOAM case files to plain
 NumPy arrays. The ML repository owns graph construction and PyTorch Geometric
@@ -42,7 +42,19 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--provenance",
-        help="Certified reconciliation CSV; physical-v2 exports only decision=usable cases",
+        help=(
+            "Reconciliation CSV; physical-v2 exports decision=usable cases by "
+            "default and can retain decision=review only with --include-review"
+        ),
+    )
+    parser.add_argument(
+        "--include-review",
+        action="store_true",
+        help=(
+            "Also export QC/provenance review cases as explicitly labelled "
+            "exploratory_review data. This does not certify those cases and must "
+            "not be used to support validation or benchmark claims."
+        ),
     )
     parser.add_argument("--case-id", action="append", help="Export only selected case id; repeatable")
     parser.add_argument("--limit", type=int, help="Maximum number of cases to export")
@@ -77,15 +89,22 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.include_review and args.schema_version != PHYSICAL_SCHEMA_VERSION:
+        raise SystemExit("--include-review is supported only for physical-v2 export")
     outdir = Path(args.outdir)
     selection_limit = None if args.schema_version == PHYSICAL_SCHEMA_VERSION else args.limit
+    selected_statuses = {args.status}
+    if args.include_review:
+        selected_statuses.add("review")
     rows = load_selected_rows(
-        Path(args.summary), args.status, set(args.case_id or []), selection_limit
+        Path(args.summary), selected_statuses, set(args.case_id or []), selection_limit
     )
     if args.schema_version == PHYSICAL_SCHEMA_VERSION:
         if not args.provenance:
             raise SystemExit("physical-v2 export requires --provenance")
-        rows = select_certified_rows(rows, Path(args.provenance))
+        rows = select_provenance_rows(
+            rows, Path(args.provenance), include_review=args.include_review
+        )
         if args.limit is not None:
             rows = rows[: args.limit]
 
@@ -129,13 +148,19 @@ def main() -> int:
     return 0
 
 
-def load_selected_rows(summary: Path, status: str, case_ids: set[str], limit: int | None) -> list[dict[str, str]]:
+def load_selected_rows(
+    summary: Path,
+    statuses: str | set[str],
+    case_ids: set[str],
+    limit: int | None,
+) -> list[dict[str, str]]:
+    allowed_statuses = {statuses} if isinstance(statuses, str) else set(statuses)
     with summary.open(newline="") as handle:
         rows = list(csv.DictReader(handle))
     selected = []
     seen: set[str] = set()
     for row in rows:
-        if row.get("status") != status:
+        if row.get("status") not in allowed_statuses:
             continue
         if row.get("include_in_dataset", "true").lower() != "true":
             continue
@@ -154,6 +179,16 @@ def load_selected_rows(summary: Path, status: str, case_ids: set[str], limit: in
 def select_certified_rows(
     rows: list[dict[str, str]], provenance_path: Path
 ) -> list[dict[str, str]]:
+    """Backward-compatible certified-only provenance selection."""
+    return select_provenance_rows(rows, provenance_path, include_review=False)
+
+
+def select_provenance_rows(
+    rows: list[dict[str, str]],
+    provenance_path: Path,
+    *,
+    include_review: bool,
+) -> list[dict[str, str]]:
     decisions: dict[str, str] = {}
     with provenance_path.open(newline="") as handle:
         for row in csv.DictReader(handle):
@@ -168,12 +203,32 @@ def select_certified_rows(
         raise ValueError(
             f"certified provenance is missing selected cases: {missing[:5]}"
         )
-    selected = [row for row in rows if decisions[row["case_id"]] == "usable"]
+    allowed_decisions = {"usable", "review"} if include_review else {"usable"}
+    selected = []
+    for source_row in rows:
+        decision = decisions[source_row["case_id"]]
+        if decision not in allowed_decisions:
+            continue
+        row = dict(source_row)
+        row["provenance_decision"] = decision
+        row["dataset_scope"] = (
+            "certified" if decision == "usable" else "exploratory_review"
+        )
+        selected.append(row)
     if not selected:
-        raise ValueError("certified provenance contains no usable selected cases")
+        label = "usable/review" if include_review else "usable"
+        raise ValueError(f"provenance contains no {label} selected cases")
     excluded = len(rows) - len(selected)
     if excluded:
-        print(f"excluded {excluded} non-certified cases from physical-v2 export")
+        print(f"excluded {excluded} cases outside the selected provenance policy")
+    if include_review:
+        review_count = sum(
+            row["provenance_decision"] == "review" for row in selected
+        )
+        print(
+            f"including {review_count} explicitly labelled exploratory_review cases; "
+            "they remain ineligible for validation claims"
+        )
     return selected
 
 
@@ -196,13 +251,31 @@ def prepare_ascii_cases(rows: list[dict[str, str]], ascii_workdir: Path, args: a
         require_dir(src, f"source case directory for {case_id}")
         if dst.exists():
             shutil.rmtree(dst)
-        shutil.copytree(src, dst, ignore=shutil.ignore_patterns("processor*"))
+        stage_case_inputs(src, dst, final_time)
         patch_control_dict_ascii(dst / "system" / "controlDict")
         run_write_cell_centres(dst, final_time)
         if args.schema_version == PHYSICAL_SCHEMA_VERSION:
             run_write_cell_volumes(dst, final_time)
         run_foam_format_convert(dst, final_time)
         print(f"prepared ASCII case {case_id} -> {dst}")
+
+
+def stage_case_inputs(src: Path, dst: Path, final_time: str) -> None:
+    """Copy only files required for conversion, not logs or post-processing."""
+    dst.mkdir(parents=True)
+    for name in ("0", "constant", "system", final_time):
+        source = src / name
+        if not source.exists():
+            raise FileNotFoundError(f"Missing ASCII-staging input: {source}")
+        target = dst / name
+        if source.is_dir():
+            shutil.copytree(
+                source,
+                target,
+                ignore=shutil.ignore_patterns("processor*"),
+            )
+        else:
+            shutil.copy2(source, target)
 
 
 def patch_control_dict_ascii(path: Path) -> None:
@@ -675,6 +748,8 @@ def manifest_row(
         "batch_id": row.get("batch_id", ""),
         "role": row.get("role", ""),
         "status": row.get("status", ""),
+        "provenance_decision": row.get("provenance_decision", ""),
+        "dataset_scope": row.get("dataset_scope", ""),
         "final_time": row.get("final_time", ""),
         "Cl_mean": row.get("Cl_mean", ""),
         "Cd_mean": row.get("Cd_mean", ""),
@@ -687,7 +762,8 @@ def manifest_row(
 def write_manifest(rows: list[dict[str, Any]], path: Path) -> None:
     fields = [
         "case_id", "source_path", "aoa_deg", "re", "nu", "batch_id", "role",
-        "status", "final_time", "Cl_mean", "Cd_mean", "Cm_mean",
+        "status", "provenance_decision", "dataset_scope", "final_time",
+        "Cl_mean", "Cd_mean", "Cm_mean",
         "export_schema_version", "mesh_sha256",
     ]
     with path.open("w", newline="") as handle:
