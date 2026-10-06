@@ -1,8 +1,23 @@
-# Cluster Handoff: NACA0012 v2 Study
+# Two-Cluster Handoff: NACA0012 v2 Study
 
-This is the execution contract for the colleague running the study. Use an
-immutable Git tag. Full CFD cases, NPZ snapshots, graphs, checkpoints, and run
-directories stay outside Git.
+This is the execution contract for moving the study from the CPU/OpenFOAM CFD
+cluster to the separate Tesla M10 training cluster. Use an immutable Git tag.
+Full CFD cases, NPZ snapshots, graphs, checkpoints, and run directories stay
+outside Git.
+
+## Host boundary
+
+The two clusters have different responsibilities:
+
+| Host | Responsibility | Required data |
+|---|---|---|
+| CFD cluster | OpenFOAM QC, provenance reconciliation, physical-v2 NPZ export | Original CFD cases and OpenFOAM |
+| Mac transfer host | Checksum-verified private bridge and backup | Portable physical-v2 bundle only |
+| M10 cluster | Graph construction, validation, statistics, profiling, training, evaluation | GitHub checkout plus portable physical-v2 bundle |
+
+The M10 cluster does not require OpenFOAM, the original case directories, or
+the 9.3-GB temporary ASCII staging directory. Graphs are regenerated from the
+verified NPZ snapshots on the M10 cluster.
 
 ## Scope and stop rule
 
@@ -19,12 +34,18 @@ comparison against a certified-only split, but it does not close the CFD
 validation gate and cannot support benchmark, accuracy, or digital-twin
 validation claims.
 
-Checklist:
+CFD-host checklist, completed before the M10 handoff:
 
-- [ ] Confirm the immutable Git revision and a clean working tree.
-- [ ] Qualify the OpenFOAM and Tesla M10 environments.
+- [ ] Confirm the exporter Git revision.
 - [ ] Re-run CFD QC and reconcile all source/export evidence.
 - [ ] Produce and re-reconcile the physical-v2 NPZ export.
+- [ ] Verify all bundle checksums after copying to the Mac.
+
+M10-host checklist:
+
+- [ ] Confirm the immutable Git revision and a clean working tree.
+- [ ] Copy the physical-v2 bundle outside Git and verify all checksums.
+- [ ] Qualify the Tesla M10 environment.
 - [ ] Build and validate L4 graphs, split, and train-only statistics.
 - [ ] Profile one complete optimizer step on one M10.
 - [ ] Run a two-stage smoke job that proves checkpoint resume.
@@ -35,7 +56,7 @@ validation from this smoke run.
 
 ## 0. Required inputs
 
-Before starting, obtain:
+The CFD export operator requires:
 
 - the Git tag or commit to run;
 - the production `parametricDataset` directory with `cases.csv`, source cases,
@@ -44,14 +65,27 @@ Before starting, obtain:
   columns `case_id,decision,reviewer,evidence,notes`;
 - a reviewed exclusion table for every automated-QC failure that will not be
   rerun, using the same columns and `decision=exclude`;
-- a persistent artifact directory with enough quota for ASCII staging, NPZ
-  snapshots, graphs, and run output;
+- a persistent artifact directory with enough quota for ASCII staging and NPZ
+  snapshots;
 - the site-specific command used to activate OpenFOAM.
+
+The M10 operator requires only:
+
+- the immutable Git revision;
+- the portable dataset directory containing `raw/manifest.csv`, 100 files in
+  `raw/snapshots/`, 100 files in `raw/verify/`, physical-v2 provenance, and
+  `dataset_files.sha256`;
+- the QC evidence directory for audit purposes;
+- a persistent artifact directory for graphs, statistics, checkpoints, and
+  reports; and
+- the site-specific M10 partition/account settings.
 
 If any input is missing, stop and report it rather than fabricating a
 replacement.
 
-## 1. Define paths
+## 1. Define paths on each host
+
+On the CFD cluster, Sections 3 and 4 use:
 
 ```bash
 export AIRFOIL_REPO_ROOT=/path/to/airfoil-digital-twin
@@ -78,6 +112,39 @@ test -f "$AIRFOIL_CFD_STUDY/cases.csv"
 test -f "$AIRFOIL_CFD_STUDY/exports/ml_npz_full/manifest.csv"
 ```
 
+On the separate M10 cluster, define only repository, portable dataset, and
+training-artifact paths:
+
+```bash
+export AIRFOIL_REPO_ROOT=/path/to/airfoil-digital-twin
+export AIRFOIL_DATASET_ROOT=/path/to/private-data/naca0012_l4_sa_v2
+export AIRFOIL_ARTIFACT_ROOT=/path/to/airfoil-training-artifacts
+cd "$AIRFOIL_REPO_ROOT"
+mkdir -p "$AIRFOIL_ARTIFACT_ROOT/reports"
+```
+
+Transfer the already verified directory from the Mac through the site's
+approved private channel. For direct SSH/SCP, the pattern is:
+
+```bash
+scp -r \
+  /local/private/naca0012_l4_sa_v2 \
+  user@m10-host:/path/to/private-data/
+```
+
+Do not put the dataset in the Git checkout or push it to GitHub.
+
+Verify the transferred dataset before installing or running the GNN stack:
+
+```bash
+cd "$AIRFOIL_DATASET_ROOT"
+sha256sum -c dataset_files.sha256 \
+  > "$AIRFOIL_ARTIFACT_ROOT/reports/dataset-checksums.txt"
+test "$(grep -c ': OK$' "$AIRFOIL_ARTIFACT_ROOT/reports/dataset-checksums.txt")" -eq 202
+test "$(find raw/snapshots -type f -name '*.npz' | wc -l)" -eq 100
+test "$(find raw/verify -type f -name '*.verify.json' | wc -l)" -eq 100
+```
+
 ## 2. Create the M10 environment
 
 ```bash
@@ -94,14 +161,7 @@ Confirm the currently supported Maxwell wheel command against the official
 PyTorch installation documentation before creating the release environment.
 Do not replace it with an unconstrained latest PyTorch/CUDA build.
 
-Activate the site's OpenFOAM environment and confirm that the required tools
-are available:
-
-```bash
-command -v simpleFoam
-command -v postProcess
-command -v foamFormatConvert
-```
+OpenFOAM is not installed or invoked as part of the M10 workflow.
 
 Record the environment and hardware evidence:
 
@@ -114,7 +174,7 @@ conda env export --from-history \
 python -m pip freeze > "$AIRFOIL_ARTIFACT_ROOT/reports/pip-freeze.txt"
 ```
 
-## 3. Reconcile CFD evidence
+## 3. CFD host only: reconcile CFD evidence
 
 ```bash
 cd "$AIRFOIL_CFD_STUDY"
@@ -149,7 +209,7 @@ the command returns nonzero. A manual `pass` never overrides missing source
 evidence or failed automated QC; an explicit exclusion keeps the case in the
 audit trail but removes it from the physical export.
 
-## 4. Export the versioned physical dataset
+## 4. CFD host only: export the versioned physical dataset
 
 The ASCII staging step writes cell centers and volumes with OpenFOAM, converts
 the required mesh/field files to ASCII, and leaves the production cases
@@ -235,19 +295,19 @@ For the certified track, stop if this second reconciliation fails. For the
 explicit all-case track, omit `--require-resolved`; retain the resulting review
 rows as the audit record and do not describe that track as validated.
 
-## 5. Build and validate v2 graphs
+## 5. M10 host: build and validate v2 graphs
 
 ```bash
 cd "$AIRFOIL_REPO_ROOT"
 python scripts/export_naca_graphs.py \
-  --manifest "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw/manifest.csv" \
+  --manifest "$AIRFOIL_DATASET_ROOT/raw/manifest.csv" \
   --input-format npz \
   --schema-version v2 \
   --chord 1.0 \
   --outdir "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/graphs"
 
 python scripts/build_splits.py \
-  --manifest "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw/manifest.csv" \
+  --manifest "$AIRFOIL_DATASET_ROOT/raw/manifest.csv" \
   --mode stratified \
   --out "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/primary_split.json"
 
@@ -271,7 +331,7 @@ a comparison split containing only currently certified rows:
 
 ```bash
 python scripts/build_splits.py \
-  --manifest "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw/manifest.csv" \
+  --manifest "$AIRFOIL_DATASET_ROOT/raw/manifest.csv" \
   --mode stratified \
   --provenance-decision usable \
   --out "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/certified_only_split.json"
@@ -289,8 +349,8 @@ Write checksums for the small frozen artifacts:
 
 ```bash
 sha256sum \
-  "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/raw/manifest.csv" \
-  "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/phase2_provenance_physical_v2.csv" \
+  "$AIRFOIL_DATASET_ROOT/raw/manifest.csv" \
+  "$AIRFOIL_DATASET_ROOT/phase2_provenance_physical_v2.csv" \
   "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/primary_split.json" \
   "$AIRFOIL_ARTIFACT_ROOT/naca0012_l4_sa_v2/normalization_primary.json" \
   > "$AIRFOIL_ARTIFACT_ROOT/reports/artifact_hashes.sha256"
@@ -375,10 +435,11 @@ full graph/model fits one 8-GB GPU with operational memory margin.
 
 Stop and return the evidence if any of these occurs:
 
-- any provenance row is `review` or `reject`; documented `excluded` rows are
-  allowed but must not appear in the export manifest;
+- any provenance row is `reject`; the explicitly approved exploratory all-case
+  track may retain labelled `review` rows, but certified-only scientific claims
+  may use only `provenance_decision=usable` cases;
 - a physical array, boundary mapping, cell volume, or mesh hash is missing;
-- the graph count differs from the certified manifest;
+- the graph count differs from the selected manifest/split protocol;
 - a graph is not the approved 229,376-cell L4 topology;
 - normalization was not computed exclusively from the frozen training split;
 - the environment check, CUDA tensor test, unit tests, profile, training,

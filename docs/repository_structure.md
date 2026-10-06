@@ -12,7 +12,7 @@ Choose the path that matches your role:
 |---|---|---|
 | New reader or reviewer | `README.md` | Whole repository |
 | CFD researcher | `cfd/README.md` | `cfd/naca0012/` |
-| Cluster operator | `COLLEAGUE_INSTRUCTIONS.md` | CFD export and M10 pilot |
+| Cluster operator | `COLLEAGUE_INSTRUCTIONS.md` | Separate CFD-export and M10-training handoff |
 | ML/GNN researcher | `docs/dataset_protocol.md` | `src/airfoil_dt/`, `configs/`, `scripts/` |
 | Digital-twin developer | `docs/digital_twin_scope.md` | `src/airfoil_dt/digital_twin/`, `dashboard/` |
 | Paper or reproducibility reviewer | `docs/naca0012_study_protocol.md` | `docs/`, `tests/` |

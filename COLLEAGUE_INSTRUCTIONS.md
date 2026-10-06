@@ -9,15 +9,23 @@ Follow the command-level runbook in
 the first failed gate and return the failure evidence. Do not change CFD,
 dataset, split, normalization, target, loss, or model settings without approval.
 
-The current assignment ends after:
+The CFD export is performed on a separate CPU/OpenFOAM cluster by the dataset
+owner. The colleague does not need the original OpenFOAM cases and must not
+repeat CFD conversion on the M10 cluster. The colleague receives:
 
-1. production CFD QC and provenance reconciliation;
-2. physical-v2 export and post-export reconciliation;
-3. L4 graph/split/normalization validation;
-4. one-M10 memory profiling;
-5. two-stage smoke training with checkpoint resume;
-6. held-out smoke evaluation; and
-7. return of the small evidence package.
+- this repository from GitHub at the recorded revision;
+- the verified physical-v2 bundle (`raw/`, provenance, and checksums) through a
+  private data-transfer channel; and
+- the site-specific M10/Slurm details.
+
+The colleague's current assignment ends after:
+
+1. verifying the transferred physical-v2 checksums;
+2. L4 graph/split/normalization validation;
+3. one-M10 memory profiling;
+4. two-stage smoke training with checkpoint resume;
+5. held-out smoke evaluation; and
+6. return of the small evidence package.
 
 The smoke evaluation verifies the pipeline only. It is not a reportable model
 accuracy result.
@@ -47,6 +55,6 @@ These remain pending but must not start until the returned evidence is reviewed:
 
 ## Data handling
 
-Keep full CFD cases, processor directories, ASCII staging cases, NPZ snapshots,
-PyTorch graphs, checkpoints, and ordinary run directories outside Git. Return
-only the compact reports listed in the runbook.
+Do not transfer the full CFD cases or ASCII staging to the M10 cluster. Keep NPZ
+snapshots, PyTorch graphs, checkpoints, and ordinary run directories outside
+Git. Return only the compact reports listed in the runbook.
