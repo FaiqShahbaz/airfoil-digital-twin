@@ -1,17 +1,11 @@
-# CFD Workflow
+# CFD Source
 
-The CFD source of truth is `cfd/naca0012/`. It contains the lightweight
-OpenFOAM dictionaries, reference data, validation studies, cluster scripts,
-quality-control tools, and ML snapshot exporter for the NACA0012 study.
+The canonical CFD narrative is [../CFD_WORKFLOW.md](../CFD_WORKFLOW.md).
 
-Start with:
+This directory owns lightweight OpenFOAM case templates, reference data,
+validation studies, cluster scripts, QC tools and the physical-v2 snapshot
+exporter. Generated run directories, processor decompositions, post-processing
+output, ASCII staging and NPZ files remain ignored.
 
-- `naca0012/README.md` for the CFD methodology and validation record;
-- `../docs/naca0012_study_protocol.md` for the frozen scientific protocol;
-- `../docs/cluster_handoff.md` for production reconciliation and export;
-- `../docs/dataset_protocol.md` for the CFD-to-graph boundary.
-
-Generated run directories, processor decompositions, post-processing output,
-ASCII staging cases, and NPZ exports are deliberately ignored by Git. Do not
-move GNN training code into this directory; graph/model code belongs under
-`src/airfoil_dt/`.
+The reusable GNN implementation does not belong here; it lives under
+`src/airfoil_dt/` and is documented in [../GNN_WORKFLOW.md](../GNN_WORKFLOW.md).

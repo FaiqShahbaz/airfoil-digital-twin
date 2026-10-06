@@ -20,7 +20,9 @@ The dashboard is not the training or evaluation layer. It should call stable API
 
 ## Run
 
-Install dashboard dependencies, create a graph template, and launch Streamlit. For a fresh clone without real CFD artifacts, run the synthetic path in `docs/quickstart.md` first:
+Install dashboard dependencies, create a graph template, and launch Streamlit.
+For a fresh clone without real CFD artifacts, use the synthetic software path
+in [`../GNN_WORKFLOW.md`](../GNN_WORKFLOW.md) first:
 
 ```bash
 python -m pip install -e '.[dashboard]'

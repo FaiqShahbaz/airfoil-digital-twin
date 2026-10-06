@@ -31,7 +31,8 @@ python scripts/create_graph_template.py --input data/processed/naca0012_l4_sa/gr
 
 Use the manifest from `data/raw/naca0012_l4_sa/manifest.csv` directly unless its `source_path` values are rewritten; the exported manifest uses paths relative to its own directory.
 
-For a fresh clone without real CFD artifacts, use `docs/quickstart.md` to generate synthetic demo artifacts first.
+For a fresh clone without real CFD artifacts, use the synthetic-demo section
+of [`../GNN_WORKFLOW.md`](../GNN_WORKFLOW.md) only for software verification.
 
 Examples for harder evaluation splits:
 
@@ -51,5 +52,5 @@ python scripts/train_experiment.py --config configs/experiments/naca0012_gcn.yam
 ```
 
 The last checkpoint includes optimizer, Python/NumPy/PyTorch/CUDA random state,
-best-metric state, and the early-stopping counter. See `docs/m10_training.md`
-before running on Tesla M10 hardware.
+best-metric state, and the early-stopping counter. See
+[`../GNN_WORKFLOW.md`](../GNN_WORKFLOW.md) before running on Tesla M10 hardware.

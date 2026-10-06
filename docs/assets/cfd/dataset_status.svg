@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
+  <title id="title">Status of the 100-case CFD dataset</title>
+  <desc id="desc">Seventy-one cases are currently provenance-usable, eighteen require documented high-angle or high-Reynolds review, and eleven carry automated convergence warnings.</desc>
+  <style>.h{font:700 28px system-ui,sans-serif;fill:#102a43}.t{font:600 20px system-ui,sans-serif;fill:#102a43}.s{font:15px system-ui,sans-serif;fill:#334e68}.n{font:700 38px system-ui,sans-serif;fill:white}</style>
+  <rect width="1100" height="360" fill="#f8fafc"/>
+  <text class="h" x="550" y="48" text-anchor="middle">Current provenance disposition: 100 retained cases</text>
+  <rect x="70" y="95" width="681.6" height="90" rx="12" fill="#16a34a"/><text class="n" x="410" y="150" text-anchor="middle">71 certified</text>
+  <rect x="751.6" y="95" width="172.8" height="90" fill="#f59e0b"/><text class="n" x="838" y="150" text-anchor="middle">18</text>
+  <rect x="924.4" y="95" width="105.6" height="90" rx="12" fill="#dc2626"/><text class="n" x="977" y="150" text-anchor="middle">11</text>
+  <circle cx="120" cy="245" r="10" fill="#16a34a"/><text class="t" x="145" y="252">71 provenance-usable</text><text class="s" x="145" y="278">Eligible for the certified-only split.</text>
+  <circle cx="485" cy="245" r="10" fill="#f59e0b"/><text class="t" x="510" y="252">18 physical-review cases</text><text class="s" x="510" y="278">High AoA and/or high Re; review remains documented.</text>
+  <circle cx="855" cy="245" r="10" fill="#dc2626"/><text class="t" x="880" y="252">11 QC-review cases</text><text class="s" x="880" y="278">Force-drift warning at the fixed cutoff.</text>
+  <text class="s" x="550" y="325" text-anchor="middle">All 100 may be used only in the explicitly labelled exploratory track; review is not certification.</text>
+</svg>

@@ -1,8 +1,8 @@
 # Contributing
 
-Thank you for improving the airfoil surrogate study. Read
-`docs/repository_structure.md` and `docs/project_status.md` before making a
-change; they define component ownership and the validation gates.
+Thank you for improving the airfoil surrogate study. Read `CFD_WORKFLOW.md`
+and `GNN_WORKFLOW.md` before making a change; they define component ownership,
+the execution sequence and the validation gates.
 
 ## Development Setup
 
@@ -14,8 +14,8 @@ python scripts/check_environment.py
 python -m pytest -q
 ```
 
-Tesla M10 work uses `environment-m10.yml` and the separate qualification steps
-in `docs/m10_training.md`.
+Tesla M10 work uses `environment-m10.yml` and the qualification steps in
+`GNN_WORKFLOW.md`.
 
 ## Where Changes Belong
 

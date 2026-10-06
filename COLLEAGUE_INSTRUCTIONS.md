@@ -1,60 +1,49 @@
-# Colleague Instructions
+# M10 Colleague Instructions
 
-This file is the shareable entry point for the colleague operating the cluster.
+The CFD simulations and physical-v2 conversion were completed on a separate
+CPU/OpenFOAM cluster. Do not repeat them on the M10 cluster.
+
+## You will receive
+
+1. This GitHub repository at an approved immutable revision.
+2. A private `naca0012_l4_sa_v2` directory containing the manifest, 100 NPZ
+   snapshots, 100 verification records, provenance and 202 checksums.
+3. Site-specific M10 login, storage and Slurm settings.
+
+The dataset is delivered outside GitHub. It must remain outside the checkout.
+
+## Reading order
+
+1. [GNN_WORKFLOW.md](GNN_WORKFLOW.md), Sections 2–6: paths, transfer
+   verification, tensor contract and M10 environment gate.
+2. [GNN_WORKFLOW.md](GNN_WORKFLOW.md), Sections 7–10: graph construction,
+   splits, validation and normalization.
+3. [GNN_WORKFLOW.md](GNN_WORKFLOW.md), Sections 12–14: memory profile, smoke
+   training, exact resume and held-out smoke evaluation.
+4. [CFD_WORKFLOW.md](CFD_WORKFLOW.md) only when reviewing the data provenance
+   and claim boundary.
 
 ## Assignment
 
-Follow the command-level runbook in
-[`docs/cluster_handoff.md`](docs/cluster_handoff.md) from top to bottom. Stop at
-the first failed gate and return the failure evidence. Do not change CFD,
-dataset, split, normalization, target, loss, or model settings without approval.
+Stop at the first failed gate and preserve the output. Do not weaken a
+threshold, omit a case, relabel review data, change a split, modify targets, or
+edit a model configuration without approval.
 
-The CFD export is performed on a separate CPU/OpenFOAM cluster by the dataset
-owner. The colleague does not need the original OpenFOAM cases and must not
-repeat CFD conversion on the M10 cluster. The colleague receives:
+The current assignment ends after:
 
-- this repository from GitHub at the recorded revision;
-- the verified physical-v2 bundle (`raw/`, provenance, and checksums) through a
-  private data-transfer channel; and
-- the site-specific M10/Slurm details.
+1. all 202 dataset checksums pass on the M10 cluster;
+2. the M10 CUDA/PyTorch environment passes its hardware gate;
+3. all selected graphs, splits and train-only statistics validate;
+4. one complete optimizer step fits one M10 GPU;
+5. fresh and resumed smoke jobs complete; and
+6. held-out smoke evaluation writes its evidence package.
 
-The colleague's current assignment ends after:
-
-1. verifying the transferred physical-v2 checksums;
-2. L4 graph/split/normalization validation;
-3. one-M10 memory profiling;
-4. two-stage smoke training with checkpoint resume;
-5. held-out smoke evaluation; and
-6. return of the small evidence package.
-
-The smoke evaluation verifies the pipeline only. It is not a reportable model
-accuracy result.
-
-## Files to read
-
-1. [`docs/cluster_handoff.md`](docs/cluster_handoff.md) — exact commands,
-   expected outputs, and stop conditions.
-2. [`docs/m10_training.md`](docs/m10_training.md) — Maxwell/M10 constraints.
-3. [`docs/project_status.md`](docs/project_status.md) — completed and pending
-   project phases.
-4. [`docs/naca0012_study_protocol.md`](docs/naca0012_study_protocol.md) — fixed
-   scientific assumptions and claim boundaries.
-
-## Pending tasks after the colleague handoff
-
-These remain pending but must not start until the returned evidence is reviewed:
-
-- validate OpenFOAM surface pressure and shear reconstruction for `Cp`, `Cl`,
-  `Cd`, and `Cm`;
-- freeze full interpolation and extrapolation experiment matrices;
-- run multiple seeds and feature/model ablations;
-- add uncertainty calibration and OOD detection;
-- create the public artifact manifest with hashes;
-- select the public license and complete citation metadata;
-- promote the open-loop surrogate toward an observation-updated digital twin.
+The smoke model is a software qualification artifact. Its metrics are not
+reportable model accuracy.
 
 ## Data handling
 
-Do not transfer the full CFD cases or ASCII staging to the M10 cluster. Keep NPZ
-snapshots, PyTorch graphs, checkpoints, and ordinary run directories outside
-Git. Return only the compact reports listed in the runbook.
+Do not copy the full CFD cases or 9.3-GB ASCII staging directory. Do not commit
+NPZ snapshots, `.pt` graphs, checkpoints, credentials or run directories.
+Return only environment reports, hashes, validation summaries, memory evidence,
+run histories and evaluation summaries.

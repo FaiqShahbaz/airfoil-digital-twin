@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">Leakage-safe GNN feature and target contract</title>
+  <desc id="desc">Geometry, mesh, boundaries, Reynolds number and angle of attack are allowed model inputs. Velocity, pressure and turbulence solution fields are supervised targets and are forbidden as runtime inputs.</desc>
+  <style>.h{font:700 27px system-ui,sans-serif;fill:#102a43}.t{font:600 19px system-ui,sans-serif;fill:#102a43}.s{font:15px system-ui,sans-serif;fill:#334e68}.ok{font:700 17px system-ui,sans-serif;fill:#166534}.no{font:700 17px system-ui,sans-serif;fill:#991b1b}</style>
+  <rect width="1200" height="430" fill="#f8fafc"/>
+  <text class="h" x="600" y="45" text-anchor="middle">Physical-v2 supervised-learning contract</text>
+  <rect x="55" y="80" width="500" height="280" rx="18" fill="#dcfce7" stroke="#16a34a" stroke-width="3"/>
+  <text class="ok" x="305" y="118" text-anchor="middle">ALLOWED DEPLOYABLE INPUTS</text>
+  <text class="t" x="90" y="160">Node x</text><text class="s" x="220" y="160">x/c, z/c, r/c, log10(V/c³), wall, farfield</text>
+  <text class="t" x="90" y="205">Edge</text><text class="s" x="220" y="205">dx/c, dz/c, distance/c, sin θ, cos θ</text>
+  <text class="t" x="90" y="250">Global u</text><text class="s" x="220" y="250">normalized Reynolds number and AoA</text>
+  <text class="t" x="90" y="295">Diagnostics</text><text class="s" x="220" y="295">boundary geometry and cell volume</text>
+  <rect x="645" y="80" width="500" height="280" rx="18" fill="#fee2e2" stroke="#dc2626" stroke-width="3"/>
+  <text class="no" x="895" y="118" text-anchor="middle">SUPERVISED TARGETS — NEVER RUNTIME INPUTS</text>
+  <text class="t" x="690" y="170">Velocity</text><text class="s" x="850" y="170">Ux, Uz</text>
+  <text class="t" x="690" y="220">Pressure</text><text class="s" x="850" y="220">kinematic p</text>
+  <text class="t" x="690" y="270">Turbulence</text><text class="s" x="850" y="270">nuTilda</text>
+  <text class="t" x="690" y="320">Also blocked</text><text class="s" x="850" y="320">nut, forces, residuals, same-case diagnostics</text>
+  <text class="s" x="600" y="402" text-anchor="middle">Targets may be used for loss, validation and diagnostics only. Normalization is fitted on training cases only.</text>
+</svg>

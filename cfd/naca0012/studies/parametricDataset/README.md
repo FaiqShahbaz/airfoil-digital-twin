@@ -63,7 +63,7 @@ source ~/Cluster_Project/Software/miniconda/bin/activate naca_post
 python3 postprocess_parametric_dataset.py --notes-dir ../../notes
 ```
 
-The Phase 2 postprocessor writes `qc_version=phase2-v1`; a missing/nonfinite force or y+ diagnostic, excessive `Cl`/`Cd`/`Cm` drift, or missing reconstructed final fields prevents automatic `usable` status. Reconcile the inventory, QC summary, export manifest, source case, and verification JSON using `reconcile_provenance.py`. High-AoA/Re cases additionally require documented physical review. `prepare_review_tables.py` creates pending manual-review and exclusion queues without approving them, while `generate_review_evidence.py` creates force/surface plots and wake references for human inspection. A reviewed exclusion remains visible in the 100-case audit but is omitted from the physical export. See `docs/naca0012_phase2_reconciliation.md` from the repository root for exact commands, thresholds, and the current open-gate status.
+The Phase 2 postprocessor writes `qc_version=phase2-v1`; a missing/nonfinite force or y+ diagnostic, excessive `Cl`/`Cd`/`Cm` drift, or missing reconstructed final fields prevents automatic `usable` status. Reconcile the inventory, QC summary, export manifest, source case, and verification JSON using `reconcile_provenance.py`. High-AoA/Re cases additionally require documented physical review. `prepare_review_tables.py` creates pending manual-review and exclusion queues without approving them, while `generate_review_evidence.py` creates force/surface plots and wake references for human inspection. A reviewed exclusion remains visible in the 100-case audit but is omitted from a certified physical export. See [`../../../../CFD_WORKFLOW.md`](../../../../CFD_WORKFLOW.md) for the complete sequence, thresholds, and current provenance state.
 
 ## Export Manifest
 
@@ -102,4 +102,7 @@ The ASCII staging copy contains only `0`, `constant`, `system`, and the final
 time directory. Logs, processor directories, and `postProcessing` are not
 duplicated.
 
-The downstream ML workflow expects a compact manifest plus reduced `.npz` snapshots containing `cell_centers`, `owner`, `neighbour`, `U`, `p`, and `nuTilda`. Those artifacts are copied into ignored local paths under `data/raw/naca0012_l4_sa/` before running the graph export scripts documented in `docs/artifacts.md`.
+The downstream ML workflow consumes the physical-v2 manifest and snapshots
+through the process documented in
+[`../../../../GNN_WORKFLOW.md`](../../../../GNN_WORKFLOW.md). The bundle remains
+in an ignored private data path outside the Git checkout.

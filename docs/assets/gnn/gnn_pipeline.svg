@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="300" viewBox="0 0 1400 300" role="img" aria-labelledby="title desc">
+  <title id="title">GNN workflow from portable CFD data to evaluated surrogate</title>
+  <desc id="desc">Verified physical-v2 snapshots become finite-volume graphs, frozen splits and train-only statistics, a profiled M10 smoke run, model training, held-out evaluation, and a gated runtime artifact.</desc>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker><style>.b{rx:13;stroke-width:2}.h{font:600 17px system-ui,sans-serif;fill:#102a43}.s{font:13px system-ui,sans-serif;fill:#334e68}.l{stroke:#475569;stroke-width:3;marker-end:url(#a)}</style></defs>
+  <rect width="1400" height="300" fill="#f8fafc"/>
+  <rect class="b" x="20" y="75" width="170" height="120" fill="#e0e7ff" stroke="#4f46e5"/><text class="h" x="105" y="112" text-anchor="middle">Verified NPZ</text><text class="s" x="105" y="140" text-anchor="middle">100 snapshots</text><text class="s" x="105" y="160" text-anchor="middle">202 checksums</text>
+  <line class="l" x1="190" y1="135" x2="215" y2="135"/>
+  <rect class="b" x="225" y="75" width="170" height="120" fill="#dbeafe" stroke="#2563eb"/><text class="h" x="310" y="112" text-anchor="middle">FV graphs</text><text class="s" x="310" y="140" text-anchor="middle">229,376 nodes</text><text class="s" x="310" y="160" text-anchor="middle">physical edges</text>
+  <line class="l" x1="395" y1="135" x2="420" y2="135"/>
+  <rect class="b" x="430" y="75" width="170" height="120" fill="#dcfce7" stroke="#16a34a"/><text class="h" x="515" y="112" text-anchor="middle">Freeze protocol</text><text class="s" x="515" y="140" text-anchor="middle">splits</text><text class="s" x="515" y="160" text-anchor="middle">train-only stats</text>
+  <line class="l" x1="600" y1="135" x2="625" y2="135"/>
+  <rect class="b" x="635" y="75" width="170" height="120" fill="#fef3c7" stroke="#d97706"/><text class="h" x="720" y="112" text-anchor="middle">M10 gate</text><text class="s" x="720" y="140" text-anchor="middle">environment</text><text class="s" x="720" y="160" text-anchor="middle">memory profile</text>
+  <line class="l" x1="805" y1="135" x2="830" y2="135"/>
+  <rect class="b" x="840" y="75" width="170" height="120" fill="#fae8ff" stroke="#a21caf"/><text class="h" x="925" y="112" text-anchor="middle">Train + resume</text><text class="s" x="925" y="140" text-anchor="middle">MLP · GCN</text><text class="s" x="925" y="160" text-anchor="middle">MeshGraphNet</text>
+  <line class="l" x1="1010" y1="135" x2="1035" y2="135"/>
+  <rect class="b" x="1045" y="75" width="160" height="120" fill="#fee2e2" stroke="#dc2626"/><text class="h" x="1125" y="112" text-anchor="middle">Held-out eval</text><text class="s" x="1125" y="140" text-anchor="middle">field · regional</text><text class="s" x="1125" y="160" text-anchor="middle">volume metrics</text>
+  <line class="l" x1="1205" y1="135" x2="1230" y2="135"/>
+  <rect class="b" x="1240" y="75" width="140" height="120" fill="#f1f5f9" stroke="#475569"/><text class="h" x="1310" y="112" text-anchor="middle">Runtime</text><text class="s" x="1310" y="140" text-anchor="middle">gated artifact</text><text class="s" x="1310" y="160" text-anchor="middle">not yet a twin</text>
+  <text class="s" x="700" y="245" text-anchor="middle">Every arrow is a validation gate. A smoke run proves software operation, not scientific accuracy.</text>
+</svg>
